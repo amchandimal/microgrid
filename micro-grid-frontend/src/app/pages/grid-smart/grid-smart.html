@@ -1,0 +1,276 @@
+<div class="wizard">
+  <header class="wizard__head">
+    <h1>How to Be Grid Smart</h1>
+    <p class="lede">
+      Three quick questions and we'll show you the most you can save or earn.
+      <strong>No roof? No problem</strong> — most of these options don't need one.
+    </p>
+    <ol class="steps" aria-label="Progress">
+      <li [class.on]="step() === 'location'" [class.done]="!!located()">Where you live</li>
+      <li [class.on]="step() === 'role'" [class.done]="!!role()">You</li>
+      <li [class.on]="step() === 'questions'" [class.done]="!!plan()">Your place</li>
+      <li [class.on]="step() === 'plan'">Your plan</li>
+    </ol>
+  </header>
+
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+
+  <!-- Step 0 -------------------------------------------------------------- -->
+  @if (step() === 'location') {
+    <section class="card">
+      <h2>Where do you live?</h2>
+      <p class="hint">A suburb or postcode is plenty.</p>
+      <div class="field">
+        <input
+          type="text"
+          placeholder="e.g. Warrawong, or 2502"
+          [value]="addressQuery()"
+          (input)="onAddressInput($any($event.target).value)"
+          autocomplete="off"
+        />
+        @if (searching()) { <span class="spinner" aria-label="Searching"></span> }
+      </div>
+      @if (addressResults().length) {
+        <ul class="results">
+          @for (r of addressResults(); track r.displayName) {
+            <li><button type="button" (click)="chooseAddress(r)">{{ r.displayName }}</button></li>
+          }
+        </ul>
+      }
+    </section>
+  }
+
+  <!-- Step 1 -------------------------------------------------------------- -->
+  @if (step() === 'role') {
+    <section class="card">
+      <h2>Which best describes you?</h2>
+      <div class="choices choices--big">
+        <button type="button" (click)="chooseRole('HOMEOWNER')">
+          <span class="glyph">🏠</span> I own the home I live in
+        </button>
+        <button type="button" (click)="chooseRole('LANDLORD')">
+          <span class="glyph">🔑</span> I own a property others live in
+        </button>
+        <button type="button" (click)="chooseRole('RENTER')">
+          <span class="glyph">🛋️</span> I rent my home
+        </button>
+      </div>
+      <button type="button" class="link" (click)="back()">Back</button>
+    </section>
+  }
+
+  <!-- Step 2 -------------------------------------------------------------- -->
+  @if (step() === 'questions') {
+    <section class="card">
+      <h2>A few things about your place</h2>
+
+      @if (role() === 'RENTER' || role() === 'HOMEOWNER') {
+        <fieldset>
+          <legend>What type of home?</legend>
+          <div class="choices">
+            <button type="button" [class.on]="homeType() === 'HOUSE'" (click)="homeType.set('HOUSE')">House</button>
+            <button type="button" [class.on]="homeType() === 'APARTMENT'" (click)="homeType.set('APARTMENT')">Apartment or unit</button>
+            <button type="button" [class.on]="homeType() === 'TOWNHOUSE'" (click)="homeType.set('TOWNHOUSE')">Townhouse</button>
+          </div>
+        </fieldset>
+      } @else {
+        <fieldset>
+          <legend>What type of property?</legend>
+          <div class="choices">
+            <button type="button" [class.on]="homeType() === 'SINGLE_DWELLING'" (click)="homeType.set('SINGLE_DWELLING')">Single dwelling</button>
+            <button type="button" [class.on]="homeType() === 'MULTI_UNIT'" (click)="homeType.set('MULTI_UNIT')">Multi-unit or apartment block</button>
+          </div>
+        </fieldset>
+      }
+
+      @if (role() !== 'LANDLORD') {
+        <fieldset>
+          <legend>Do you have a smart meter?</legend>
+          <p class="hint">Check your meter box — a digital display usually means yes.</p>
+          <div class="choices">
+            <button type="button" [class.on]="smartMeter() === 'YES'" (click)="smartMeter.set('YES')">Yes</button>
+            <button type="button" [class.on]="smartMeter() === 'NO'" (click)="smartMeter.set('NO')">No</button>
+            <button type="button" [class.on]="smartMeter() === 'NOT_SURE'" (click)="smartMeter.set('NOT_SURE')">Not sure</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Is anyone usually home between 11am and 2pm on weekdays?</legend>
+          <div class="choices">
+            <button type="button" [class.on]="daytimePresence() === 'OFTEN'" (click)="daytimePresence.set('OFTEN')">Often</button>
+            <button type="button" [class.on]="daytimePresence() === 'SOMETIMES'" (click)="daytimePresence.set('SOMETIMES')">Sometimes</button>
+            <button type="button" [class.on]="daytimePresence() === 'RARELY'" (click)="daytimePresence.set('RARELY')">Rarely</button>
+          </div>
+        </fieldset>
+      }
+
+      @if (role() === 'HOMEOWNER' || role() === 'LANDLORD') {
+        <fieldset>
+          <legend>{{ role() === 'LANDLORD' ? 'Solar installed on the property?' : 'Do you have rooftop solar?' }}</legend>
+          <div class="choices">
+            <button type="button" [class.on]="hasSolar() === 'YES'" (click)="hasSolar.set('YES')">Yes</button>
+            <button type="button" [class.on]="hasSolar() === 'NO'" (click)="hasSolar.set('NO')">No</button>
+            <button type="button" [class.on]="hasSolar() === 'NOT_SURE'" (click)="hasSolar.set('NOT_SURE')">Not sure</button>
+          </div>
+          @if (hasSolar() === 'YES') {
+            <label class="inline">
+              Roughly how many kW?
+              <input type="number" min="0" step="0.1" [value]="solarKw() ?? ''"
+                     (input)="solarKw.set(+$any($event.target).value || null)" />
+            </label>
+          }
+        </fieldset>
+      }
+
+      @if (role() === 'HOMEOWNER') {
+        <fieldset>
+          <legend>Do you have a home battery?</legend>
+          <div class="choices">
+            <button type="button" [class.on]="hasBattery() === 'YES'" (click)="hasBattery.set('YES')">Yes</button>
+            <button type="button" [class.on]="hasBattery() === 'NO'" (click)="hasBattery.set('NO')">No</button>
+            <button type="button" [class.on]="hasBattery() === 'NOT_SURE'" (click)="hasBattery.set('NOT_SURE')">Not sure</button>
+          </div>
+        </fieldset>
+        <label class="check">
+          <input type="checkbox" [checked]="wantsToSell()" (change)="wantsToSell.set($any($event.target).checked)" />
+          I'd like to sell my surplus to neighbours at a price I set
+        </label>
+      }
+
+      @if (role() === 'LANDLORD') {
+        <label class="check">
+          <input type="checkbox" [checked]="openToSubsidised()" (change)="openToSubsidised.set($any($event.target).checked)" />
+          I'd consider solar if rebates covered a large share of the cost
+        </label>
+        <label class="check">
+          <input type="checkbox" [checked]="offerToTenants()" (change)="offerToTenants.set($any($event.target).checked)" />
+          I'd offer tenants solar power as part of the tenancy
+        </label>
+      }
+
+      @if (role() === 'RENTER') {
+        <fieldset>
+          <legend>Would you prefer options with no upfront cost?</legend>
+          <div class="choices">
+            <button type="button" [class.on]="upfront() === 'NO_UPFRONT'" (click)="upfront.set('NO_UPFRONT')">No upfront cost</button>
+            <button type="button" [class.on]="upfront() === 'OPEN_TO_INVESTMENT'" (click)="upfront.set('OPEN_TO_INVESTMENT')">Open to a one-off that pays back</button>
+          </div>
+        </fieldset>
+        <label class="check">
+          <input type="checkbox" [checked]="bigAppliances()" (change)="bigAppliances.set($any($event.target).checked)" />
+          I run an EV, pool pump or other big appliances
+        </label>
+      }
+
+      @if (role() !== 'LANDLORD') {
+        <label class="check">
+          <input type="checkbox" [checked]="concessionCard()" (change)="concessionCard.set($any($event.target).checked)" />
+          I hold a concession card (Pensioner, Health Care, Veteran)
+          <small>This unlocks extra rebates</small>
+        </label>
+      }
+
+      <div class="actions">
+        <button type="button" class="link" (click)="back()">Back</button>
+        <button type="button" class="primary" [disabled]="!canBuild || building()" (click)="buildPlan()">
+          {{ building() ? 'Building your plan…' : 'Show my plan' }}
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- Plan ----------------------------------------------------------------- -->
+  @if (step() === 'plan' && plan(); as p) {
+    <section class="plan">
+      <header class="plan__head">
+        <h2>Your Maximum Outcome Plan — {{ p.suburb }}</h2>
+        <p class="headline">
+          You could save or earn
+          <strong>{{ money(p.totalAnnualLow, p.totalAnnualHigh) }} a year.</strong>
+          {{ p.zeroUpfrontCount }} of your options cost $0 upfront.
+        </p>
+        @if (headline(); as h) {
+          <p class="headline__rec">Start with: <strong>{{ h.title }}</strong> — {{ money(h.annualLow, h.annualHigh) }}/yr</p>
+        }
+      </header>
+
+      <div class="grid-now" [attr.data-state]="p.grid.state">
+        <h3>Right now in {{ p.suburb }} ⚡</h3>
+        <p class="grid-now__state">
+          Grid is in <strong>{{ stateLabel(p.grid.state) }}</strong>
+          · local price ~{{ p.grid.priceSignalCkwh }}c/kWh
+          @if (p.grid.exportConstrained) { · <em>export capped</em> }
+        </p>
+        <p>{{ p.gridTip }}</p>
+        <p class="grid-now__nums">
+          supply {{ p.grid.supplyKw }} kW · demand {{ p.grid.demandKw }} kW
+          · {{ p.grid.cellCount }} grid cells sampled
+        </p>
+      </div>
+
+      @if (p.doThisWeek.length) {
+        <h3>Do this week</h3>
+        <ol class="recs">
+          @for (r of p.doThisWeek; track r.id) {
+            <li>
+              <div class="rec__top">
+                <strong>{{ r.title }}</strong>
+                <span class="rec__money">{{ money(r.annualLow, r.annualHigh) }}/yr</span>
+              </div>
+              <p>{{ r.summary }}</p>
+              <p class="rec__how">{{ r.howTo }}</p>
+              <p class="rec__meta">
+                <span class="tag" [class.tag--free]="r.free">
+                  {{ r.free ? '$0 upfront' : '$' + r.upfrontCost + ' upfront' }}
+                </span>
+                <span class="tag">{{ effortLabel(r.effort) }}</span>
+                <span class="rec__source">{{ r.source }}</span>
+              </p>
+            </li>
+          }
+        </ol>
+      }
+
+      @if (p.doThisMonth.length) {
+        <h3>Do this month</h3>
+        <ol class="recs" [start]="p.doThisWeek.length + 1">
+          @for (r of p.doThisMonth; track r.id) {
+            <li>
+              <div class="rec__top">
+                <strong>{{ r.title }}</strong>
+                <span class="rec__money">{{ money(r.annualLow, r.annualHigh) }}/yr</span>
+              </div>
+              <p>{{ r.summary }}</p>
+              <p class="rec__how">{{ r.howTo }}</p>
+              <p class="rec__meta">
+                <span class="tag" [class.tag--free]="r.free">
+                  {{ r.free ? '$0 upfront' : '$' + r.upfrontCost + ' upfront' }}
+                </span>
+                <span class="tag">{{ effortLabel(r.effort) }}</span>
+                <span class="rec__source">{{ r.source }}</span>
+              </p>
+            </li>
+          }
+        </ol>
+      }
+
+      <h3>How to maximise the benefit</h3>
+      <ul class="tips">
+        @for (tip of p.maximiseTips; track tip) { <li>{{ tip }}</li> }
+      </ul>
+
+      @if (p.findOutNext.length) {
+        <h3>Worth finding out</h3>
+        <ul class="tips tips--muted">
+          @for (item of p.findOutNext; track item) { <li>{{ item }}</li> }
+        </ul>
+      }
+
+      <div class="actions">
+        <button type="button" class="link" (click)="startOver()">Start over</button>
+      </div>
+    </section>
+  }
+</div>

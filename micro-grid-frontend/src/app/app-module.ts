@@ -7,12 +7,16 @@ import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
 import { MapPanel } from './components/map-panel/map-panel';
 import { DashboardPanel } from './components/dashboard-panel/dashboard-panel';
+import { Overview } from './pages/overview/overview';
+import { GridSmart } from './pages/grid-smart/grid-smart';
 
 @NgModule({
   declarations: [
     App,
     MapPanel,
-    DashboardPanel
+    DashboardPanel,
+    Overview,
+    GridSmart
   ],
   imports: [
     BrowserModule,

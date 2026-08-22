@@ -72,3 +72,87 @@ export interface GridRegion {
   maxCells: number;
   referenceLat: number;
 }
+
+// --- Energy Outcome Wizard ----------------------------------------------------
+
+export type GridState = 'SURPLUS' | 'BALANCED' | 'PEAK';
+
+export interface CommunityBattery {
+  name: string;
+  suburb: string;
+  lat: number;
+  lng: number;
+  capacityKwh: number;
+}
+
+/** Live supply and demand around one address. */
+export interface GridStatus {
+  area: string;
+  lat: number;
+  lng: number;
+  timestamp: string;
+  cellCount: number;
+  supplyKw: number;
+  demandKw: number;
+  surplusKw: number;
+  state: GridState;
+  exportConstrained: boolean;
+  priceSignalCkwh: number;
+  communityBatterySocPct: number | null;
+  communityBattery: CommunityBattery | null;
+}
+
+export type Role = 'RENTER' | 'HOMEOWNER' | 'LANDLORD';
+export type HomeType = 'HOUSE' | 'APARTMENT' | 'TOWNHOUSE' | 'SINGLE_DWELLING' | 'MULTI_UNIT';
+export type Answer = 'YES' | 'NO' | 'NOT_SURE';
+export type Presence = 'OFTEN' | 'SOMETIMES' | 'RARELY';
+export type Upfront = 'NO_UPFRONT' | 'OPEN_TO_INVESTMENT';
+
+export interface WizardAnswers {
+  address: string;
+  suburb: string;
+  lat: number;
+  lng: number;
+  role: Role | null;
+  homeType: HomeType | null;
+  smartMeter: Answer | null;
+  daytimePresence: Presence | null;
+  concessionCard: boolean;
+  upfrontPreference: Upfront | null;
+  bigAppliances: boolean;
+  hasSolar: Answer | null;
+  solarKw: number | null;
+  hasBattery: Answer | null;
+  wantsToSellSurplus: boolean;
+  openToSubsidisedSolar: boolean;
+  wouldOfferSolarToTenants: boolean;
+}
+
+export interface Recommendation {
+  id: string;
+  title: string;
+  summary: string;
+  annualLow: number;
+  annualHigh: number;
+  upfrontCost: number;
+  effort: 'ONE_TAP' | 'SHORT' | 'INVOLVED';
+  timing: 'THIS_WEEK' | 'THIS_MONTH';
+  howTo: string;
+  source: string;
+  free: boolean;
+}
+
+/** "Your Maximum Outcome Plan". */
+export interface OutcomePlan {
+  suburb: string;
+  role: Role;
+  totalAnnualLow: number;
+  totalAnnualHigh: number;
+  zeroUpfrontCount: number;
+  doThisWeek: Recommendation[];
+  doThisMonth: Recommendation[];
+  grid: GridStatus;
+  gridTip: string;
+  maximiseTips: string[];
+  findOutNext: string[];
+}

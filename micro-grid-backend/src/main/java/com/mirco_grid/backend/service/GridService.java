@@ -2,8 +2,10 @@ package com.mirco_grid.backend.service;
 
 import com.mirco_grid.backend.service.GridSite.SiteStatus;
 import com.mirco_grid.backend.service.GridSite.SiteType;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /**
@@ -265,6 +267,178 @@ public class GridService {
 
     public List<GridSite> sites() {
         return SITES;
+    }
+
+
+    // --- live status around one address ---------------------------------------
+
+    /** How far around an address counts as "your area". */
+    public static final double NEIGHBOURHOOD_RADIUS_M = 2000;
+    /** Widened to this before giving up, for addresses on the rural fringe. */
+    private static final double FALLBACK_RADIUS_M = 5000;
+    /** Cell size used when sampling a neighbourhood. */
+    private static final double STATUS_ZOOM = 14;
+
+    /** Endeavour Energy's neighbourhood batteries in the Illawarra. */
+    private static final List<GridStatus.CommunityBattery> COMMUNITY_BATTERIES = List.of(
+            new GridStatus.CommunityBattery("Dapto community battery", "Dapto", -34.5030, 150.7930, 411),
+            new GridStatus.CommunityBattery("Warrawong community battery", "Warrawong", -34.4881, 150.8869, 411),
+            new GridStatus.CommunityBattery("Russell Vale community battery", "Russell Vale", -34.3853, 150.8996, 250),
+            new GridStatus.CommunityBattery("Shell Cove community battery", "Shell Cove", -34.5930, 150.8580, 411));
+
+    /** A battery further away than this is not "yours". */
+    private static final double BATTERY_REACH_M = 4000;
+
+    /**
+     * Supply and demand around one point, right now.
+     *
+     * <p>Built by aggregating the very same cells {@link #cellsForView} hands
+     * the map, then shaped by the time of day: rooftop output follows the sun,
+     * household load has a morning bump and an evening peak. Change how a cell
+     * is valued and this moves with it.
+     *
+     * @return empty when nothing on the network is close enough to sample
+     */
+    public Optional<GridStatus> statusAt(double lat, double lng, ZonedDateTime when) {
+        for (double radius : new double[] {NEIGHBOURHOOD_RADIUS_M, FALLBACK_RADIUS_M}) {
+            Optional<GridStatus> status = statusWithin(lat, lng, radius, when);
+            if (status.isPresent()) {
+                return status;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<GridStatus> statusWithin(
+            double lat, double lng, double radiusM, ZonedDateTime when) {
+
+        double dLat = radiusM / 110950.0;
+        double dLng = radiusM / (111320.0 * Math.cos(Math.toRadians(lat)));
+        GridCells page = cellsForView(
+                Math.max(lat - dLat, IllawarraRegion.SOUTH),
+                Math.max(lng - dLng, IllawarraRegion.WEST),
+                Math.min(lat + dLat, IllawarraRegion.NORTH),
+                Math.min(lng + dLng, IllawarraRegion.EAST),
+                STATUS_ZOOM);
+
+        double supplyAvg = 0, demandAvg = 0;
+        int counted = 0;
+        for (GridCell cell : page.cells()) {
+            if (groundDistanceM(cell.lat(), cell.lng(), lat, lng) > radiusM) continue;
+            supplyAvg += cell.supplyKw();
+            demandAvg += cell.demandKw();
+            counted++;
+        }
+        if (counted == 0) {
+            return Optional.empty();
+        }
+
+        double hour = when.getHour() + when.getMinute() / 60.0;
+        double supplyKw = supplyAvg * solarFactor(hour);
+        double demandKw = demandAvg * loadFactor(hour);
+        double surplusKw = supplyKw - demandKw;
+
+        GridStatus.State state;
+        if (supplyKw > demandKw * 1.1) {
+            state = GridStatus.State.SURPLUS;
+        } else if (demandKw > supplyKw * 1.1) {
+            state = GridStatus.State.PEAK;
+        } else {
+            state = GridStatus.State.BALANCED;
+        }
+
+        // The local network can only take back so much. A neighbourhood
+        // generating half again what it uses is pushing against that limit.
+        boolean exportConstrained = surplusKw > demandKw * 1.5;
+
+        GridStatus.CommunityBattery battery = nearestBattery(lat, lng);
+
+        return Optional.of(new GridStatus(
+                String.format("within %.1f km of %.4f, %.4f", radiusM / 1000, lat, lng),
+                round(lat, 6),
+                round(lng, 6),
+                when.toOffsetDateTime(),
+                counted,
+                round(supplyKw, 1),
+                round(demandKw, 1),
+                round(surplusKw, 1),
+                state,
+                exportConstrained,
+                round(priceSignal(supplyKw, demandKw), 1),
+                battery == null ? null : batterySocPct(hour),
+                battery));
+    }
+
+    /**
+     * Rooftop output through the day: nothing before dawn, a bell peaking at
+     * solar noon. Not a solar model, just the shape of one.
+     */
+    static double solarFactor(double hour) {
+        if (hour <= 6 || hour >= 19) return 0;
+        return Math.sin(Math.PI * (hour - 6) / 13);
+    }
+
+    /**
+     * Household load through the day: a floor overnight, a bump as people get
+     * up, and the evening peak that costs everyone the most money.
+     */
+    static double loadFactor(double hour) {
+        double morning = 0.30 * bell(hour, 7.5, 1.8);
+        double evening = 0.85 * bell(hour, 18.5, 2.2);
+        return 0.55 + morning + evening;
+    }
+
+    private static double bell(double x, double centre, double width) {
+        return Math.exp(-Math.pow((x - centre) / width, 2));
+    }
+
+    /**
+     * Indicative peer-to-peer price. Cheap when the neighbourhood is long on
+     * power, up toward the retail rate when it is short.
+     */
+    private static double priceSignal(double supplyKw, double demandKw) {
+        double ratio = demandKw <= 0 ? 2 : supplyKw / demandKw;
+        // ratio 2 -> 8.5c (surplus), 1 -> 15c (spread), 0 -> 32c (retail)
+        if (ratio >= 1) {
+            double t = Math.min(1, ratio - 1);
+            return 15.0 + t * (8.5 - 15.0);
+        }
+        return 15.0 + (1 - ratio) * (32.0 - 15.0);
+    }
+
+    /** Charges through the middle of the day, pays it back over the evening. */
+    private static int batterySocPct(double hour) {
+        double soc = 0.35 + 0.55 * integratedSolar(hour) - 0.5 * eveningDraw(hour);
+        return (int) Math.round(Math.max(0.05, Math.min(1, soc)) * 100);
+    }
+
+    private static double integratedSolar(double hour) {
+        // Rough running total of the solar day so far, 0 at dawn, 1 by dusk.
+        if (hour <= 6) return 0;
+        if (hour >= 19) return 1;
+        return (1 - Math.cos(Math.PI * (hour - 6) / 13)) / 2;
+    }
+
+    private static double eveningDraw(double hour) {
+        if (hour <= 17) return 0;
+        return Math.min(1, (hour - 17) / 5.0);
+    }
+
+    private static GridStatus.CommunityBattery nearestBattery(double lat, double lng) {
+        GridStatus.CommunityBattery best = null;
+        double bestDistance = BATTERY_REACH_M;
+        for (GridStatus.CommunityBattery battery : COMMUNITY_BATTERIES) {
+            double d = groundDistanceM(battery.lat(), battery.lng(), lat, lng);
+            if (d < bestDistance) {
+                bestDistance = d;
+                best = battery;
+            }
+        }
+        return best;
+    }
+
+    public List<GridStatus.CommunityBattery> communityBatteries() {
+        return COMMUNITY_BATTERIES;
     }
 
     // --- geometry ------------------------------------------------------------
