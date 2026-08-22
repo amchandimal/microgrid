@@ -81,6 +81,30 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<systemPropertyVariables>
+						<!--
+						  Tests never call Google. A reCAPTCHA assessment needs
+						  Application Default Credentials and a real browser
+						  token, so leaving it on would make `mvn package` fail
+						  on any machine without a service account - including
+						  when spring.profiles.active is prod, which is the
+						  whole point of a production build.
+
+						  A system property outranks both application-prod.properties
+						  and the environment in Spring's precedence order, so this
+						  wins whatever profile is active. The guard itself is
+						  covered by RecaptchaInterceptorTest, which drives it
+						  directly against a mocked assessment client.
+						-->
+						<micro-grid.recaptcha.enabled>false</micro-grid.recaptcha.enabled>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 

@@ -10,8 +10,6 @@ import com.google.recaptchaenterprise.v1.TokenProperties;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
 /**
  * Scores one client token against reCAPTCHA Enterprise.
@@ -22,18 +20,16 @@ import org.springframework.stereotype.Component;
  * so), the project and key come from configuration instead of literals, and
  * the outcome is returned as a {@link RecaptchaVerdict} instead of printed.
  *
- * <p>Only a bean when {@code micro-grid.recaptcha.enabled} is true, which is
- * only under the {@code prod} profile. That is what keeps a developer machine
- * from needing Application Default Credentials to start the app: with the
- * property false this class is never instantiated, so
+ * <p>Only built when {@code micro-grid.recaptcha.enabled} is true - see
+ * {@code RecaptchaConfig}. That is what keeps a developer machine and the test
+ * JVM from needing Application Default Credentials: with the property false
+ * this class is never instantiated, so
  * {@code RecaptchaEnterpriseServiceClient.create()} never runs.
  *
  * <p>Conversely, in production the client is built at startup, so missing or
  * unauthorised credentials fail the boot loudly rather than turning into a
  * site that refuses every request at runtime.
  */
-@Component
-@ConditionalOnProperty(prefix = "micro-grid.recaptcha", name = "enabled", havingValue = "true")
 public class CreateAssessment implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(CreateAssessment.class);

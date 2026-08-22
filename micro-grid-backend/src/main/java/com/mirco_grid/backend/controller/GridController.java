@@ -53,7 +53,16 @@ public class GridController {
             int finestMetres,
             int finestZoom,
             int maxCells,
-            double referenceLat) {}
+            double referenceLat,
+            /**
+             * The part of {@code bounds} the overlay has data for.
+             *
+             * <p>The camera covers the whole region; the modelled field covers
+             * the surveyed strip. Sent so the map can say which is which
+             * instead of leaving the difference looking like a loading failure.
+             */
+            double[][] surveyedBounds,
+            String coverageNote) {}
 
     @GetMapping("/region")
     public RegionResponse region() {
@@ -66,7 +75,10 @@ public class GridController {
                 GridService.FINEST_METRES,
                 GridService.FINEST_ZOOM,
                 GridService.MAX_CELLS,
-                GridService.REFERENCE_LAT);
+                GridService.REFERENCE_LAT,
+                IllawarraRegion.surveyedBounds(),
+                "The supply and demand overlay is modelled from Helensburgh to Kiama."
+                        + " The rest of the region is mapped but not yet surveyed.");
     }
 
     @GetMapping("/sites")

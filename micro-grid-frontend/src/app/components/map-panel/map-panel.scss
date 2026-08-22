@@ -296,3 +296,9 @@
 @media (max-width: 900px) {
   .map-host { min-height: 320px; }
 }
+
+/* The camera reaches further than the survey does; the legend says so. */
+.legend-note {
+  color: var(--mg-text-dim);
+  font-style: italic;
+}

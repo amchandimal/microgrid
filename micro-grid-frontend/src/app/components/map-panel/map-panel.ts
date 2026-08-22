@@ -67,6 +67,15 @@ export class MapPanel implements AfterViewInit, OnDestroy {
   protected readonly loadError = signal<string | null>(null);
   protected readonly legendGradient = this.hexGrid.legendGradient();
 
+  /**
+   * Why the overlay stops short of the map's edges.
+   *
+   * <p>The camera runs Waterfall to Jervis Bay; the modelled field only covers
+   * Helensburgh to Kiama. Saying so in the legend is the difference between a
+   * known limit and what otherwise reads as a half-loaded map.
+   */
+  protected readonly coverageNote = signal<string | null>(null);
+
   constructor() {
     this.query$
       .pipe(
@@ -140,6 +149,7 @@ export class MapPanel implements AfterViewInit, OnDestroy {
 
   private initMap(region: GridRegion): void {
     this.region = region;
+    this.coverageNote.set(region.coverageNote ?? null);
     this.loadError.set(null);
 
     this.map = L.map(this.mapHost.nativeElement, {
