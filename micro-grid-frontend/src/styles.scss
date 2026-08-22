@@ -1,0 +1,114 @@
+/* Global styles for micro-grid-frontend */
+
+:root {
+  --mg-bg: #f4f6f8;
+  --mg-surface: #ffffff;
+  --mg-surface-2: #f2f4f7;
+  --mg-border: #e2e6ec;
+  --mg-text: #16202c;
+  --mg-text-dim: #6b7887;
+
+  --mg-accent: #2f6df6;
+  --mg-supplier: #f5a524;
+  --mg-household: #2f6df6;
+  --mg-ok: #16a34a;
+  --mg-warn: #d97706;
+  --mg-danger: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mg-bg: #0e1319;
+    --mg-surface: #151b23;
+    --mg-surface-2: #1c242e;
+    --mg-border: #27313d;
+    --mg-text: #e8edf3;
+    --mg-text-dim: #8b98a8;
+
+    --mg-accent: #4d86ff;
+    --mg-supplier: #fbbf24;
+    --mg-household: #4d86ff;
+    --mg-ok: #34d399;
+    --mg-warn: #fbbf24;
+    --mg-danger: #f87171;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--mg-bg);
+  color: var(--mg-text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Leaflet marker glyphs (rendered outside Angular's view encapsulation) --- */
+.mg-marker {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+  background: var(--mg-surface);
+  border: 2px solid var(--mg-border);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.mg-marker:hover { transform: scale(1.15); }
+.mg-marker--supplier { border-color: var(--mg-supplier); }
+.mg-marker--household { border-color: var(--mg-household); }
+.mg-marker--search {
+  border-color: var(--mg-danger);
+  background: color-mix(in srgb, var(--mg-danger) 12%, var(--mg-surface));
+}
+
+/* --- Leaflet chrome themed to match the app --- */
+.leaflet-container {
+  font-family: inherit;
+  background: var(--mg-surface-2);
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--mg-surface);
+  color: var(--mg-text);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.22);
+}
+
+.leaflet-popup-content {
+  margin: 0.6rem 0.8rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.leaflet-popup-content strong { font-size: 0.83rem; }
+
+.leaflet-control-zoom a {
+  background: var(--mg-surface);
+  color: var(--mg-text);
+  border-color: var(--mg-border);
+}
+
+.leaflet-control-zoom a:hover { background: var(--mg-surface-2); }
+
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--mg-surface) 85%, transparent) !important;
+  color: var(--mg-text-dim);
+  font-size: 10px;
+}
+
+.leaflet-control-attribution a { color: var(--mg-accent); }
