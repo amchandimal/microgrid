@@ -3,6 +3,7 @@ import { HttpRequest, HttpHandlerFn, HttpEvent } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { councilTokenInterceptor } from './council-token-interceptor';
 import { Auth } from '../services/auth';
+import { apiUrl } from '../core/api';
 
 /** Stands in for a signed-in (or signed-out) session. */
 class FakeAuth {
@@ -10,7 +11,7 @@ class FakeAuth {
   token = () => this.value;
 }
 
-function sendThrough(url: string, token: string | null): HttpRequest<unknown> {
+function sendThrough(url: string): HttpRequest<unknown> {
   return TestBed.runInInjectionContext(() => {
     let seen!: HttpRequest<unknown>;
     const next: HttpHandlerFn = (request): Observable<HttpEvent<unknown>> => {
@@ -32,14 +33,18 @@ describe('Council token interceptor', () => {
 
   it('attaches the bearer token to council calls', () => {
     configure('council-demo-token');
-    const request = sendThrough('/api/council/summary', 'council-demo-token');
-    expect(request.headers.get('Authorization')).toBe('Bearer council-demo-token');
+    for (const url of ['/api/council/summary', apiUrl('/api/council/summary')]) {
+      expect(sendThrough(url).headers.get('Authorization')).toBe(
+        'Bearer council-demo-token',
+      );
+    }
   });
 
   it('leaves the public API alone', () => {
     configure('council-demo-token');
-    for (const url of ['/api/grid/region', '/api/wizard/plan', '/api/auth/login']) {
-      expect(sendThrough(url, 'council-demo-token').headers.get('Authorization')).toBeNull();
+    for (const path of ['/api/grid/region', '/api/wizard/plan', '/api/auth/login']) {
+      expect(sendThrough(path).headers.get('Authorization')).toBeNull();
+      expect(sendThrough(apiUrl(path)).headers.get('Authorization')).toBeNull();
     }
   });
 
@@ -48,13 +53,12 @@ describe('Council token interceptor', () => {
     configure('council-demo-token');
     const request = sendThrough(
       'https://nominatim.openstreetmap.org/search?q=/api/council/',
-      'council-demo-token',
     );
     expect(request.headers.get('Authorization')).toBeNull();
   });
 
   it('sends nothing when nobody is signed in', () => {
     configure(null);
-    expect(sendThrough('/api/council/summary', null).headers.get('Authorization')).toBeNull();
+    expect(sendThrough('/api/council/summary').headers.get('Authorization')).toBeNull();
   });
 });
