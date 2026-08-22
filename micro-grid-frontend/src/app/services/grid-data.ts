@@ -2,14 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
 import { GridApi } from './grid-api';
-import { GridSite, PricePoint } from '../models/grid.models';
+import { GridInstallations, GridSite, PricePoint } from '../models/grid.models';
 
 /**
  * Shared dashboard state.
  *
- * The network itself - the region, the sites and the overlay - comes from
- * GridController. What is still local is the trading data, which has no
- * backend yet.
+ * The network itself - the region, the sites, the overlay and the installed
+ * fleet - comes from GridController. What is still local is the trading data,
+ * which has no backend yet and is signposted as indicative wherever it shows.
  */
 @Injectable({ providedIn: 'root' })
 export class GridData {
@@ -19,6 +19,17 @@ export class GridData {
   readonly sites = toSignal(
     this.api.sites$.pipe(catchError(() => of<GridSite[]>([]))),
     { initialValue: [] as GridSite[] },
+  );
+
+  /**
+   * Wollongong's real rooftop fleet, and where it lands on the map.
+   *
+   * <p>Null until the first response, so the dashboard can tell "still
+   * loading" from "the API is down" instead of showing a confident zero.
+   */
+  readonly installations = toSignal(
+    this.api.installations$.pipe(catchError(() => of<GridInstallations | null>(null))),
+    { initialValue: null as GridInstallations | null },
   );
 
   /** Buying / selling price in cents per kWh across the trading day. */

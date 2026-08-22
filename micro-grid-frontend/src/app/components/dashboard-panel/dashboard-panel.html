@@ -2,54 +2,135 @@
   <header class="dash__head">
     <div>
       <h2>Grid Dashboard</h2>
-      <p>Illawarra Region, NSW &middot; live snapshot</p>
+      <p>
+        Wollongong LGA, NSW
+        @if (period(); as p) { &middot; {{ p }} }
+      </p>
     </div>
-    <span class="badge">DEMO DATA</span>
+    @if (totals()) {
+      <span class="badge badge--live">COUNCIL DATA</span>
+    }
   </header>
 
-  <!-- Key metrics -->
-  <section class="cards">
-    <article class="card card--supplier">
-      <span class="card__label">Energy Suppliers</span>
-      <span class="card__value">{{ supplierCount() }}</span>
-      <span class="card__meta">{{ onlineSuppliers() }} online &middot; {{ totalCapacityKw() | number }} kW capacity</span>
-    </article>
+  <!-- Key metrics — the real installed fleet -->
+  @if (totals(); as t) {
+    <section class="cards">
+      <article class="card card--supplier">
+        <span class="card__label">Rooftop systems</span>
+        <span class="card__value">{{ t.totalInstalls | number }}</span>
+        <span class="card__meta">
+          {{ t.residentialInstalls | number }} residential &middot;
+          {{ t.commercialInstalls | number }} commercial &middot;
+          {{ t.powerStationInstalls }} power stations
+        </span>
+      </article>
 
-    <article class="card card--household">
-      <span class="card__label">Households</span>
-      <span class="card__value">{{ householdCount() }}</span>
-      <span class="card__meta">{{ onlineHouseholds() }} online &middot; {{ totalDemandKw() | number }} kW demand</span>
-    </article>
+      <article class="card card--supplier">
+        <span class="card__label">Installed capacity</span>
+        <span class="card__value">{{ t.totalKw / 1000 | number: '1.1-1' }}<small>MW</small></span>
+        <span class="card__meta">
+          {{ t.residentialKw / 1000 | number: '1.1-1' }} MW residential &middot;
+          {{ t.commercialKw / 1000 | number: '1.1-1' }} MW commercial
+        </span>
+      </article>
 
-    <article class="card card--buy">
-      <span class="card__label">Buying Price</span>
-      <span class="card__value">{{ buyPrice() | number: '1.2-2' }}<small>c/kWh</small></span>
-      <span class="card__meta up">▲ 4.2% vs yesterday</span>
-    </article>
+      <article class="card card--household">
+        <span class="card__label">Households with solar</span>
+        <span class="card__value">{{ t.residentialInstalls | number }}</span>
+        <span class="card__meta">{{ t.avgResidentialSystemKw }} kW average system</span>
+      </article>
 
-    <article class="card card--sell">
-      <span class="card__label">Selling Price</span>
-      <span class="card__value">{{ sellPrice() | number: '1.2-2' }}<small>c/kWh</small></span>
-      <span class="card__meta down">▼ 1.8% vs yesterday</span>
-    </article>
-  </section>
+      <article class="card card--household">
+        <span class="card__label">Commercial systems</span>
+        <span class="card__value">{{ t.commercialInstalls | number }}</span>
+        <span class="card__meta">
+          {{ t.commercialKw / t.commercialInstalls | number: '1.1-1' }} kW average &middot;
+          across {{ t.areaCount }} areas
+        </span>
+      </article>
+    </section>
+  } @else {
+    <p class="loading">Loading the installed fleet…</p>
+  }
 
-  <!-- Spread strip -->
-  <section class="spread">
-    <div>
-      <span class="spread__label">Spread</span>
-      <strong>{{ spread() | number: '1.2-2' }} c/kWh</strong>
-    </div>
-    <div class="spread__bar">
-      <div class="spread__fill" [style.width.%]="margin()"></div>
-    </div>
-    <div class="spread__pct">{{ margin() }}%</div>
-  </section>
+  <!-- Systems by area -->
+  @if (installations(); as fleet) {
+    <section class="panel">
+      <div class="panel__head">
+        <h3>Systems by area</h3>
+        <div class="toggle" role="group" aria-label="Order areas by">
+          <button
+            type="button"
+            [class.on]="areaSort() === 'households'"
+            (click)="setAreaSort('households')"
+          >
+            Households
+          </button>
+          <button
+            type="button"
+            [class.on]="areaSort() === 'commercial'"
+            (click)="setAreaSort('commercial')"
+          >
+            Commercial
+          </button>
+        </div>
+      </div>
 
-  <!-- Price curve -->
+      <ul class="areas">
+        @for (area of areas(); track area.id) {
+          <li class="area">
+            <span class="area__name" [title]="area.postcode ? area.name + ' · ' + area.postcode : area.name">
+              {{ area.name }}
+            </span>
+            <span class="area__track">
+              <span class="area__fill" [style.width.%]="areaBar(area)"></span>
+            </span>
+            <span class="area__value">{{ areaValue(area) | number }}</span>
+            <span class="area__share">{{ sharePct(area) | number: '1.1-1' }}%</span>
+          </li>
+        }
+      </ul>
+
+      <p class="method">
+        {{ fleet.method }}
+      </p>
+    </section>
+  }
+
+  <!-- Indicative trading signal -->
   <section class="panel">
     <div class="panel__head">
-      <h3>Price curve — today</h3>
+      <h3>Trading signal</h3>
+      <span class="badge">INDICATIVE</span>
+    </div>
+
+    <div class="cards cards--prices">
+      <article class="card card--buy">
+        <span class="card__label">Buying Price</span>
+        <span class="card__value">{{ buyPrice() | number: '1.2-2' }}<small>c/kWh</small></span>
+        <span class="card__meta up">▲ 4.2% vs yesterday</span>
+      </article>
+
+      <article class="card card--sell">
+        <span class="card__label">Selling Price</span>
+        <span class="card__value">{{ sellPrice() | number: '1.2-2' }}<small>c/kWh</small></span>
+        <span class="card__meta down">▼ 1.8% vs yesterday</span>
+      </article>
+    </div>
+
+    <div class="spread">
+      <div>
+        <span class="spread__label">Spread</span>
+        <strong>{{ spread() | number: '1.2-2' }} c/kWh</strong>
+      </div>
+      <div class="spread__bar">
+        <div class="spread__fill" [style.width.%]="margin()"></div>
+      </div>
+      <div class="spread__pct">{{ margin() }}%</div>
+    </div>
+
+    <div class="panel__head panel__head--sub">
+      <h4>Price curve — today</h4>
       <div class="chart-key">
         <span><i class="dot dot--buy"></i>Buy</span>
         <span><i class="dot dot--sell"></i>Sell</span>
@@ -66,6 +147,10 @@
         </div>
       }
     </div>
+    <p class="method">
+      Placeholder peer-to-peer prices — there is no trading backend behind these
+      yet, and they are the only numbers on this panel that are not measured.
+    </p>
   </section>
 
   <!-- Suppliers -->
@@ -89,10 +174,10 @@
     </ul>
   </section>
 
-  <!-- Households -->
+  <!-- Household clusters -->
   <section class="panel">
     <div class="panel__head">
-      <h3>Households</h3>
+      <h3>Household clusters</h3>
       <span class="count">{{ householdCount() }}</span>
     </div>
     <ul class="list">
@@ -109,4 +194,12 @@
       }
     </ul>
   </section>
+
+  @if (installations(); as fleet) {
+    <p class="sources">
+      @for (source of fleet.sources; track source) {
+        <span>{{ source }}</span>
+      }
+    </p>
+  }
 </div>
