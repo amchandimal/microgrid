@@ -54,6 +54,7 @@
 
 .topbar__nav {
   display: flex;
+  align-items: center;
   gap: 0.25rem;
 
   a {
@@ -67,6 +68,19 @@
     &:hover { background: var(--mg-surface-2); color: var(--mg-text); }
     &.active { background: var(--mg-surface-2); color: var(--mg-text); }
   }
+}
+
+.topbar__signout {
+  padding: 0.32rem 0.6rem;
+  border: 1px solid var(--mg-border);
+  border-radius: 7px;
+  background: var(--mg-surface);
+  color: var(--mg-text-dim);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+
+  &:hover { background: var(--mg-surface-2); color: var(--mg-text); }
 }
 
 .shell__body {

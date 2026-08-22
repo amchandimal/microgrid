@@ -12,8 +12,12 @@
         Overview
       </a>
       <a routerLink="/grid-smart" routerLinkActive="active">How to Be Grid Smart</a>
-      <a href="javascript:void(0)">Trades</a>
-      <a href="javascript:void(0)">Settings</a>
+      @if (isCouncil()) {
+        <a routerLink="/council" routerLinkActive="active">Council dashboard</a>
+        <button type="button" class="topbar__signout" (click)="signOut()">Sign out</button>
+      } @else {
+        <a routerLink="/login/council" routerLinkActive="active">Council</a>
+      }
     </nav>
   </header>
 

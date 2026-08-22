@@ -1,0 +1,51 @@
+<div class="login">
+  <form class="login__card" (submit)="submit($event)" autocomplete="off">
+    <span class="login__crest" aria-hidden="true">🏛️</span>
+    <h1>Council sign-in</h1>
+    <p class="lede">
+      The equity dashboard ranks Wollongong suburbs by how well served they are
+      and names the ones to intervene in next. That is staff data, so it sits
+      behind a sign-in.
+    </p>
+
+    @if (error()) {
+      <p class="alert" role="alert">{{ error() }}</p>
+    }
+
+    <label class="field">
+      <span>Username</span>
+      <input
+        type="text"
+        name="username"
+        autocomplete="username"
+        [value]="username()"
+        (input)="username.set($any($event.target).value)"
+        required
+      />
+    </label>
+
+    <label class="field">
+      <span>Password</span>
+      <input
+        type="password"
+        name="password"
+        autocomplete="current-password"
+        [value]="password()"
+        (input)="password.set($any($event.target).value)"
+        required
+      />
+    </label>
+
+    <button type="submit" class="primary" [disabled]="!canSubmit">
+      {{ signingIn() ? 'Signing in…' : 'Sign in' }}
+    </button>
+
+    <p class="note">
+      <strong>Demo build.</strong> One fixed account, checked in the API — there
+      is no user directory behind this. Sign in with
+      <code>council</code> / <code>Wollongong2026!</code>.
+    </p>
+
+    <a class="back" routerLink="/">← Back to the public map</a>
+  </form>
+</div>

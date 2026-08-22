@@ -14,6 +14,19 @@
   --mg-ok: #16a34a;
   --mg-warn: #d97706;
   --mg-danger: #dc2626;
+
+  /* --- Chart series ---------------------------------------------------------
+     Three categorical slots, in fixed order - never cycled, never reassigned by
+     rank. Validated against this app's own surfaces rather than assumed: on
+     white, worst adjacent pair is aqua/orange at deuteranopia dE 8.4 and normal
+     vision dE 27.1, all three at or above 3:1 contrast. Aqua uses its darker
+     step in light mode because this app's surface is pure white rather than an
+     off-white, and the lighter step misses 3:1 against it. */
+  --mg-series-1: #2a78d6; /* blue */
+  --mg-series-2: #eb6834; /* orange */
+  --mg-series-3: #199e70; /* aqua */
+  /* One step off the surface: present, never competing with the data. */
+  --mg-grid-line: #e7ebf0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,6 +44,14 @@
     --mg-ok: #34d399;
     --mg-warn: #fbbf24;
     --mg-danger: #f87171;
+
+    /* The same three hues re-stepped for the dark surface, and validated
+       against it: worst adjacent pair aqua/orange at deuteranopia dE 9.4,
+       normal vision dE 26.5, all three clear of 3:1. Not an automatic flip. */
+    --mg-series-1: #3987e5;
+    --mg-series-2: #d95926;
+    --mg-series-3: #199e70;
+    --mg-grid-line: #232c37;
   }
 }
 

@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.mirco_grid.backend.service.BuiltUpDensity;
 import com.mirco_grid.backend.service.GridService;
 import com.mirco_grid.backend.service.IllawarraRegion;
+import com.mirco_grid.backend.service.council.CouncilAuth;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -18,7 +19,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(GridController.class)
-@Import({GridService.class, BuiltUpDensity.class})
+// CouncilAuth comes in because WebConfig registers the council interceptor on
+// every MVC context; this slice does not exercise it, it just has to build.
+@Import({GridService.class, BuiltUpDensity.class, CouncilAuth.class})
 class GridControllerTest {
 
     @Autowired

@@ -9,6 +9,7 @@ import {
   of,
   switchMap,
 } from 'rxjs';
+import { Router } from '@angular/router';
 import { Geocoding } from '../../services/geocoding';
 import { WizardApi } from '../../services/wizard-api';
 import {
@@ -43,6 +44,7 @@ type Step = 'location' | 'role' | 'questions' | 'plan';
 export class GridSmart {
   private readonly geocoding = inject(Geocoding);
   private readonly api = inject(WizardApi);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly address$ = new Subject<string>();
 
@@ -141,6 +143,11 @@ export class GridSmart {
     // Landlords answer about the property, not a home they live in.
     this.homeType.set(role === 'LANDLORD' ? null : this.homeType());
     this.step.set('questions');
+  }
+
+  /** The fourth tile: Council staff go to the equity dashboard, not a plan. */
+  protected goToCouncil(): void {
+    this.router.navigateByUrl('/login/council');
   }
 
   // --- step 2 -> plan -------------------------------------------------------

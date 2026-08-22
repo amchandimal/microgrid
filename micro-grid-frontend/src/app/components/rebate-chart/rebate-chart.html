@@ -1,0 +1,85 @@
+<div class="rebate">
+  <div class="rebate__controls">
+    <label class="picker">
+      <span class="sr-only">Rebate program</span>
+      <select (change)="choose($any($event.target).value)">
+        @for (program of programs(); track program.name) {
+          <option [value]="program.name" [selected]="program.name === selected()?.program">
+            {{ program.name }}{{ program.hasEligible ? '' : ' (take-up only)' }}
+          </option>
+        }
+      </select>
+    </label>
+
+    <div class="rebate__legend">
+      @if (hasEligible()) {
+        <span><i class="key" style="background: var(--mg-series-2)"></i>Estimated eligible</span>
+      }
+      <span><i class="key" style="background: var(--mg-series-1)"></i>Receiving the rebate</span>
+    </div>
+  </div>
+
+  <svg
+    class="rebate__svg"
+    [attr.width]="width()"
+    [attr.height]="totalHeight"
+    [attr.viewBox]="'0 0 ' + width() + ' ' + totalHeight"
+    role="img"
+    [attr.aria-label]="'Customers receiving the ' + selected()?.program + ' against those estimated to be eligible, FY2017-18 to FY2022-23'"
+    (mousemove)="onMove($event)"
+    (mouseleave)="onLeave()"
+  >
+    @for (tick of ticks(); track tick.value) {
+      <line class="grid" [attr.x1]="left" [attr.x2]="width() - 90" [attr.y1]="tick.y" [attr.y2]="tick.y" />
+      <text class="tick" [attr.x]="left - 8" [attr.y]="tick.y + 3" text-anchor="end">{{ tick.label }}</text>
+    }
+
+    @if (gapPath()) {
+      <path class="gap" [attr.d]="gapPath()" />
+    }
+
+    @if (hasEligible()) {
+      <polyline class="line line--eligible" [attr.points]="eligiblePath()" />
+    }
+    <polyline class="line line--accounts" [attr.points]="accountsPath()" />
+
+    @if (endLabels(); as ends) {
+      @if (ends.eligible) {
+        <text class="end" [attr.x]="ends.x" [attr.y]="ends.eligible.y">
+          {{ ends.eligible.text }}
+          <tspan class="end__what" dy="12" [attr.x]="ends.x">eligible</tspan>
+        </text>
+      }
+      @if (ends.accounts) {
+        <text class="end" [attr.x]="ends.x" [attr.y]="ends.accounts.y">
+          {{ ends.accounts.text }}
+          <tspan class="end__what" dy="12" [attr.x]="ends.x">receiving</tspan>
+        </text>
+      }
+    }
+
+    @for (year of years(); track year.label) {
+      <text class="tick" [attr.x]="year.x" [attr.y]="totalHeight - 5" text-anchor="middle">
+        {{ year.label }}
+      </text>
+    }
+
+    @if (hovered(); as h) {
+      <line class="crosshair" [attr.x1]="h.x" [attr.x2]="h.x" [attr.y1]="top" [attr.y2]="top + height" />
+      <g class="tip" [attr.transform]="'translate(' + tooltipX(h.x) + ', ' + top + ')'">
+        <rect class="tip__box" width="180" height="84" rx="7" />
+        <text class="tip__fy" x="10" y="18">{{ h.point.fy }}</text>
+        <text class="tip__row" x="10" y="36">
+          <tspan class="tip__dot" fill="var(--mg-series-1)">●</tspan> Receiving
+        </text>
+        <text class="tip__value" x="170" y="36" text-anchor="end">{{ number(h.point.accounts) }}</text>
+        <text class="tip__row" x="10" y="52">
+          <tspan class="tip__dot" fill="var(--mg-series-2)">●</tspan> Eligible
+        </text>
+        <text class="tip__value" x="170" y="52" text-anchor="end">{{ number(h.point.eligibleCustomers) }}</text>
+        <text class="tip__row" x="10" y="70">Paid out</text>
+        <text class="tip__value" x="170" y="70" text-anchor="end">{{ money(h.point.paidAmountAud) }}</text>
+      </g>
+    }
+  </svg>
+</div>

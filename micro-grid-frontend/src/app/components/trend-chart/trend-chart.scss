@@ -1,0 +1,138 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.chart {
+  width: 100%;
+}
+
+.chart__svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+/* --- legend ---------------------------------------------------------------- */
+
+.chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.72rem;
+  color: var(--mg-text-dim);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+}
+
+.key {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+/* --- marks ----------------------------------------------------------------- */
+
+.line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.grid {
+  stroke: var(--mg-grid-line);
+  stroke-width: 1;
+}
+
+.tick {
+  fill: var(--mg-text-dim);
+  font-size: 10px;
+}
+
+.panel__title {
+  fill: var(--mg-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.panel__unit {
+  fill: var(--mg-text-dim);
+  font-weight: 400;
+}
+
+/* --- annotation band ------------------------------------------------------- */
+
+.band {
+  fill: color-mix(in srgb, var(--mg-warn) 14%, transparent);
+}
+
+.band__label {
+  fill: var(--mg-text-dim);
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.chart__note {
+  margin: 0.9rem 0 0;
+  padding-left: 0.6rem;
+  border-left: 2px solid color-mix(in srgb, var(--mg-warn) 55%, transparent);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--mg-text-dim);
+}
+
+/* --- hover ----------------------------------------------------------------- */
+
+.crosshair {
+  stroke: var(--mg-text-dim);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  pointer-events: none;
+}
+
+.tip {
+  pointer-events: none;
+}
+
+.tip__box {
+  fill: var(--mg-surface);
+  stroke: var(--mg-border);
+  stroke-width: 1;
+  filter: drop-shadow(0 4px 12px rgb(0 0 0 / 0.18));
+}
+
+.tip__month {
+  fill: var(--mg-text);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.tip__head {
+  fill: var(--mg-text-dim);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tip__row {
+  fill: var(--mg-text-dim);
+  font-size: 10px;
+}
+
+.tip__value {
+  fill: var(--mg-text);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tip__dot {
+  font-size: 9px;
+}
