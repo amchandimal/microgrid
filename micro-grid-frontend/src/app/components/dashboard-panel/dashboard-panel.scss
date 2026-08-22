@@ -322,3 +322,123 @@
 @media (max-width: 480px) {
   .cards { grid-template-columns: 1fr; }
 }
+
+/* ---------- the real fleet, by area ---------- */
+
+.badge--live {
+  color: var(--mg-ok);
+  background: color-mix(in srgb, var(--mg-ok) 14%, transparent);
+  border-color: color-mix(in srgb, var(--mg-ok) 35%, transparent);
+}
+
+.loading {
+  margin: 0;
+  padding: 1.25rem 0;
+  font-size: 0.8rem;
+  color: var(--mg-text-dim);
+}
+
+.toggle {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--mg-border);
+  border-radius: 8px;
+  background: var(--mg-surface-2);
+
+  button {
+    padding: 0.25rem 0.5rem;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--mg-text-dim);
+    font: inherit;
+    font-size: 0.6875rem;
+    font-weight: 550;
+    cursor: pointer;
+
+    &.on {
+      background: var(--mg-surface);
+      color: var(--mg-text);
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+    }
+  }
+}
+
+.areas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 17rem;
+  overflow-y: auto;
+}
+
+.area {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr) 3rem 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+
+  &__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--mg-text);
+  }
+
+  &__track {
+    height: 8px;
+    border-radius: 0 4px 4px 0;
+    background: var(--mg-surface-2);
+  }
+
+  &__fill {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: 0 4px 4px 0;
+    background: var(--mg-accent);
+  }
+
+  &__value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--mg-text);
+  }
+
+  &__share {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--mg-text-dim);
+  }
+}
+
+.method,
+.sources {
+  margin: 0.7rem 0 0;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  color: var(--mg-text-dim);
+}
+
+.sources span {
+  display: block;
+}
+
+.panel__head--sub {
+  margin-top: 0.9rem;
+
+  h4 {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--mg-text);
+  }
+}
+
+.cards--prices {
+  margin-bottom: 0.75rem;
+}

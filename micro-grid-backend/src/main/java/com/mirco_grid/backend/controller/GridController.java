@@ -1,5 +1,6 @@
 package com.mirco_grid.backend.controller;
 
+import com.mirco_grid.backend.service.GridAllocationService;
 import com.mirco_grid.backend.service.GridService;
 import com.mirco_grid.backend.service.GridStatus;
 import com.mirco_grid.backend.service.GridSite;
@@ -23,9 +24,23 @@ public class GridController {
     private static final ZoneId ILLAWARRA = ZoneId.of("Australia/Sydney");
 
     private final GridService gridService;
+    private final GridAllocationService allocation;
 
-    public GridController(GridService gridService) {
+    public GridController(GridService gridService, GridAllocationService allocation) {
         this.gridService = gridService;
+        this.allocation = allocation;
+    }
+
+    /**
+     * Wollongong's real rooftop fleet, and where the model puts it.
+     *
+     * <p>Read straight out of SQLite - the two Total System exports were parsed
+     * into it at startup and the areas were apportioned then, so this touches
+     * no file and rebuilds no grid.
+     */
+    @GetMapping("/installations")
+    public GridAllocationService.GridInstallations installations() {
+        return allocation.installations();
     }
 
     /** Extent and resolution limits, so the client does not hard-code them. */

@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.mirco_grid.backend.service.BuiltUpDensity;
+import com.mirco_grid.backend.service.GridAllocationService;
 import com.mirco_grid.backend.service.GridService;
 import com.mirco_grid.backend.service.IllawarraRegion;
 import com.mirco_grid.backend.service.council.CouncilAuth;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(GridController.class)
@@ -26,6 +28,11 @@ class GridControllerTest {
 
     @Autowired
     private MockMvc mvc;
+
+    // The controller now also serves the installed fleet, which is read out of
+    // SQLite. None of these tests touch it, and a slice has no datasource.
+    @MockitoBean
+    private GridAllocationService allocation;
 
     @Test
     void servesTheRegionTheMapShouldCover() throws Exception {

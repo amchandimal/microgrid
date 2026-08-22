@@ -156,3 +156,49 @@ export interface OutcomePlan {
   maximiseTips: string[];
   findOutNext: string[];
 }
+
+// --- Real installed fleet, apportioned to areas -------------------------------
+
+/** The LGA totals, straight out of the two Total System exports. */
+export interface GridTotals {
+  residentialInstalls: number;
+  commercialInstalls: number;
+  powerStationInstalls: number;
+  totalInstalls: number;
+  residentialKw: number;
+  commercialKw: number;
+  powerStationKw: number;
+  totalKw: number;
+  avgResidentialSystemKw: number;
+  areaCount: number;
+}
+
+/** One area's share of the modelled field, and the systems it earns. */
+export interface GridArea {
+  id: string;
+  name: string;
+  postcode: string | null;
+  lat: number;
+  lng: number;
+  cellCount: number;
+  supplyKw: number;
+  demandKw: number;
+  supplySharePct: number;
+  demandSharePct: number;
+  residentialInstalls: number;
+  commercialInstalls: number;
+  powerStationInstalls: number;
+  residentialKw: number;
+  commercialKw: number;
+  powerStationKw: number;
+}
+
+export interface GridInstallations {
+  /** ISO months, e.g. "2001-01 to 2025-12". */
+  period: string;
+  totals: GridTotals;
+  areas: GridArea[];
+  /** How the areas were apportioned - shown, not paraphrased. */
+  method: string;
+  sources: string[];
+}

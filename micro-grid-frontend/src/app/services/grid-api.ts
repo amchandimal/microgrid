@@ -1,7 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, shareReplay } from 'rxjs';
-import { GridCells, GridRegion, GridSite } from '../models/grid.models';
+import {
+  GridCells,
+  GridInstallations,
+  GridRegion,
+  GridSite,
+} from '../models/grid.models';
 import { apiUrl } from '../core/api';
 
 /** A viewport, in plain numbers - this service stays clear of Leaflet. */
@@ -28,6 +33,17 @@ export class GridApi {
 
   readonly sites$: Observable<GridSite[]> = this.http
     .get<GridSite[]>(`${this.base}/sites`)
+    .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+
+  /**
+   * The real installed fleet and how it lands on the map's areas.
+   *
+   * <p>Cached like the region: it is twenty-five years of finished monthly
+   * totals apportioned once at startup, so it cannot change while the page is
+   * open.
+   */
+  readonly installations$: Observable<GridInstallations> = this.http
+    .get<GridInstallations>(`${this.base}/installations`)
     .pipe(shareReplay({ bufferSize: 1, refCount: false }));
 
   /** The overlay for one viewport, at the resolution `zoom` implies. */
