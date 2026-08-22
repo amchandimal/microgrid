@@ -1,8 +1,11 @@
 package com.mirco_grid.backend.controller;
 
 import com.mirco_grid.backend.service.GridService;
+import com.mirco_grid.backend.service.GridStatus;
 import com.mirco_grid.backend.service.GridSite;
 import com.mirco_grid.backend.service.IllawarraRegion;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +19,8 @@ import org.springframework.http.HttpStatus;
 @RestController
 @RequestMapping("/api/grid")
 public class GridController {
+
+    private static final ZoneId ILLAWARRA = ZoneId.of("Australia/Sydney");
 
     private final GridService gridService;
 
@@ -52,6 +57,31 @@ public class GridController {
     @GetMapping("/sites")
     public List<GridSite> sites() {
         return gridService.sites();
+    }
+
+    /**
+     * Live supply and demand around one address.
+     *
+     * <p>The spec keys this on an areaId; the client geocodes what the user
+     * typed and sends coordinates instead, so an address anywhere in the
+     * region works without a lookup table of area names. The numbers are
+     * aggregated out of {@link GridService}, so they track the map.
+     */
+    @GetMapping("/status")
+    public GridStatus status(@RequestParam double lat, @RequestParam double lng) {
+        if (!IllawarraRegion.contains(lat, lng)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "That address is outside the Illawarra region.");
+        }
+        return gridService.statusAt(lat, lng, ZonedDateTime.now(ILLAWARRA))
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No network data close enough to that address."));
+    }
+
+    /** Neighbourhood batteries the wizard can point people at. */
+    @GetMapping("/community-batteries")
+    public List<GridStatus.CommunityBattery> communityBatteries() {
+        return gridService.communityBatteries();
     }
 
     /**

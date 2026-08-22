@@ -4,7 +4,15 @@
     {
       "name": "micro-grid-frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "micro-grid-frontend", "run", "start", "--", "--port", "4200"],
+      "runtimeArgs": [
+        "--prefix",
+        "micro-grid-frontend",
+        "run",
+        "start",
+        "--",
+        "--port",
+        "4200"
+      ],
       "port": 4200
     }
   ]
