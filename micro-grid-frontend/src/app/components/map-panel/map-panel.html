@@ -109,6 +109,9 @@
         <i class="legend-scale__bar" [style.background]="legendGradient"></i>
         More supply
       </span>
+      @if (coverageNote(); as note) {
+        <span class="legend-note">{{ note }}</span>
+      }
       @if (loadError()) {
         <span class="legend-warn">{{ loadError() }}</span>
       } @else if (loading()) {

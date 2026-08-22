@@ -83,6 +83,8 @@ export class EquityMap implements AfterViewInit, OnDestroy {
       this.gridStress();
       this.layer();
       this.draw();
+      // Markers can land after the map does; the opening fit waits for them.
+      this.fit();
     });
   }
 
@@ -141,14 +143,30 @@ export class EquityMap implements AfterViewInit, OnDestroy {
 
   private fitted = false;
 
+  /**
+   * Opens on the localities, not on the whole region.
+   *
+   * <p>The public map's camera runs from Waterfall to Jervis Bay, which is a
+   * hundred and fifteen kilometres of coast. Every locality this panel ranks is
+   * in the Wollongong LGA, in the top third of that; fitting the region would
+   * put them all in a corner. Panning is still bounded by the region - it is
+   * only the opening shot that is tightened.
+   */
   private fit(): void {
     if (!this.map || !this.region) return;
     const size = this.map.getSize();
-    if (!size.x || !size.y) return;
-    if (!this.fitted) {
-      this.fitted = true;
-      this.map.fitBounds(this.region.bounds, { padding: [8, 8] });
+    if (!size.x || !size.y || this.fitted) return;
+
+    const points = this.localities()
+      .filter((entry) => entry.lat && entry.lng)
+      .map((entry) => [entry.lat, entry.lng] as L.LatLngTuple);
+    if (!points.length) {
+      // No markers yet - wait rather than framing an empty ocean.
+      return;
     }
+
+    this.fitted = true;
+    this.map.fitBounds(L.latLngBounds(points), { padding: [24, 24] });
   }
 
   /** Grid readings keyed by locality, so a marker can find its own. */

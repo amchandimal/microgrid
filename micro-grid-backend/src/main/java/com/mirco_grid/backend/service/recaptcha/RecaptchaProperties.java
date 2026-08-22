@@ -2,8 +2,6 @@ package com.mirco_grid.backend.service.recaptcha;
 
 import java.util.Arrays;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 
 /**
@@ -14,8 +12,10 @@ import org.springframework.util.AntPathMatcher;
  * API is created at all, so a developer machine never needs Google Cloud
  * credentials. {@code application-prod.properties} is the only file that turns
  * it on.
+ *
+ * <p>Built by {@code RecaptchaConfig} rather than component-scanned, so it can
+ * never be missing from a context that has the interceptor - see that class.
  */
-@Component
 public class RecaptchaProperties {
 
     private static final AntPathMatcher MATCHER = new AntPathMatcher();
@@ -27,11 +27,11 @@ public class RecaptchaProperties {
     private final List<String> exemptPaths;
 
     public RecaptchaProperties(
-            @Value("${micro-grid.recaptcha.enabled:false}") boolean enabled,
-            @Value("${micro-grid.recaptcha.project-id:}") String projectId,
-            @Value("${micro-grid.recaptcha.site-key:}") String siteKey,
-            @Value("${micro-grid.recaptcha.min-score:0.5}") double minScore,
-            @Value("${micro-grid.recaptcha.exempt-paths:}") String[] exemptPaths) {
+            boolean enabled,
+            String projectId,
+            String siteKey,
+            double minScore,
+            String[] exemptPaths) {
         this.enabled = enabled;
         this.projectId = projectId.trim();
         this.siteKey = siteKey.trim();

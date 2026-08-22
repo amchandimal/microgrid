@@ -37,8 +37,16 @@ public class GridService {
      * Hexagon width is worked out once at this latitude rather than per
      * viewport, so the lattice is identical for every request and the client
      * can rebuild the same hexagon from a cell centre.
+     *
+     * <p>Taken from the middle of the surveyed strip rather than the middle of
+     * the region. The region is a camera extent and can be moved - it was
+     * pushed out to Waterfall and Jervis Bay without the field behind it
+     * changing at all - and every metre it moves would otherwise shift the
+     * whole lattice sideways and resize every hexagon. Anchoring it to the
+     * ground that was actually surveyed keeps the overlay identical.
      */
-    public static final double REFERENCE_LAT = (IllawarraRegion.NORTH + IllawarraRegion.SOUTH) / 2;
+    public static final double REFERENCE_LAT =
+            (IllawarraRegion.SURVEYED_NORTH + IllawarraRegion.SURVEYED_SOUTH) / 2;
 
     /**
      * Below this much built-up ground there is no network worth drawing, so no

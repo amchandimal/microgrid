@@ -6,11 +6,9 @@ import com.mirco_grid.backend.service.recaptcha.RecaptchaProperties;
 import com.mirco_grid.backend.service.recaptcha.RecaptchaVerdict;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
@@ -22,12 +20,12 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * this read spreadsheets and rebuild a grid model per call, and the public
  * ones are the expensive ones.
  *
- * <p>Only a bean when {@code micro-grid.recaptcha.enabled} is true - the
- * {@code prod} profile. Under {@code dev}, and in every test, it does not
- * exist and {@code WebConfig} registers nothing.
+ * <p>Built by {@code RecaptchaConfig}, and only when
+ * {@code micro-grid.recaptcha.enabled} is true. Deliberately not
+ * component-scanned: {@code @WebMvcTest} sweeps up every {@code
+ * HandlerInterceptor} bean it can find but not the collaborators one needs, so
+ * a scanned interceptor would break every web slice in the project.
  */
-@Component
-@ConditionalOnProperty(prefix = "micro-grid.recaptcha", name = "enabled", havingValue = "true")
 public class RecaptchaInterceptor implements HandlerInterceptor {
 
     /** Where the Angular reCAPTCHA interceptor puts the token. */

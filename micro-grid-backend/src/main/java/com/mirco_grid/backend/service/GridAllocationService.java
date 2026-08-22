@@ -55,8 +55,16 @@ public class GridAllocationService implements CommandLineRunner {
      */
     private static final double ALLOCATION_ZOOM = 13;
 
-    /** Quadrants per side. Four passes, each well inside the cell cap. */
-    private static final int TILES = 2;
+    /**
+     * Tiles per side.
+     *
+     * <p>The region is 115 km of coast now, so it is read in sixteen passes
+     * rather than four - each one has to stay well inside {@link
+     * GridService#MAX_CELLS} or the shares would be computed from a partial
+     * field. The southern tiles cost almost nothing: nothing is surveyed there
+     * yet, so no cells come back.
+     */
+    private static final int TILES = 4;
 
     private final GridService gridService;
     private final SuburbSeed seed;

@@ -71,6 +71,10 @@ export interface GridRegion {
   finestZoom: number;
   maxCells: number;
   referenceLat: number;
+  /** The part of `bounds` the overlay is modelled over. */
+  surveyedBounds: [[number, number], [number, number]];
+  /** Why the two differ, in words the legend can show. */
+  coverageNote: string;
 }
 
 // --- Energy Outcome Wizard ----------------------------------------------------

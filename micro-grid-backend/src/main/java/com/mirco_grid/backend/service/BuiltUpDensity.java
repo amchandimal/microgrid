@@ -61,11 +61,26 @@ public class BuiltUpDensity {
         return cols;
     }
 
+    /** Is this point inside the ground the lattice was sampled over? */
+    public boolean covers(double lat, double lng) {
+        return lat <= north && lat >= south && lng >= west && lng <= east;
+    }
+
     /**
      * Built-up fraction at a point, 0 (bush or sea) to 1 (solidly urban).
-     * Bilinear, and clamped to the lattice edge outside the region.
+     *
+     * <p>Bilinear inside the sampled ground, and zero outside it. Zero rather
+     * than the nearest edge value: the map now reaches from Waterfall to Jervis
+     * Bay while this lattice still covers Helensburgh to Kiama, and clamping
+     * would repeat the southern edge row for fifty kilometres - a comb of
+     * north-south stripes down the Shoalhaven that looks like data and is not.
+     * Reading zero means no cell is drawn there at all, which is the truth:
+     * nothing has been surveyed.
      */
     public double at(double lat, double lng) {
+        if (!covers(lat, lng)) {
+            return 0;
+        }
         double fr = clamp((north - lat) / (north - south) * (rows - 1), 0, rows - 1.0);
         double fc = clamp((lng - west) / (east - west) * (cols - 1), 0, cols - 1.0);
 

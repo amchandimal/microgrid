@@ -38,15 +38,15 @@ class GridControllerTest {
     void servesTheRegionTheMapShouldCover() throws Exception {
         mvc.perform(get("/api/grid/region"))
                 .andExpect(status().isOk())
-                // Top of Helensburgh down to the bottom of Kiama.
-                .andExpect(jsonPath("$.north").value(-34.145887))
-                .andExpect(jsonPath("$.south").value(-34.6947658))
+                // Top of Waterfall down to the bottom of Jervis Bay.
+                .andExpect(jsonPath("$.north").value(-34.115))
+                .andExpect(jsonPath("$.south").value(-35.175))
                 .andExpect(jsonPath("$.west").value(150.65))
                 .andExpect(jsonPath("$.east").value(151.14))
                 // Leaflet wants [[south, west], [north, east]]
-                .andExpect(jsonPath("$.bounds[0][0]").value(-34.6947658))
+                .andExpect(jsonPath("$.bounds[0][0]").value(-35.175))
                 .andExpect(jsonPath("$.bounds[0][1]").value(150.65))
-                .andExpect(jsonPath("$.bounds[1][0]").value(-34.145887))
+                .andExpect(jsonPath("$.bounds[1][0]").value(-34.115))
                 .andExpect(jsonPath("$.bounds[1][1]").value(151.14))
                 .andExpect(jsonPath("$.finestMetres").value(50))
                 .andExpect(jsonPath("$.referenceLat").value(GridService.REFERENCE_LAT));
