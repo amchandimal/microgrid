@@ -1,0 +1,57 @@
+<div class="equity-map">
+  <div class="equity-map__layers" role="group" aria-label="Colour the map by">
+    @for (option of layers; track option.id) {
+      <button
+        type="button"
+        [class.on]="layer() === option.id"
+        [attr.aria-pressed]="layer() === option.id"
+        (click)="setLayer(option.id)"
+      >
+        {{ option.label }}
+      </button>
+    }
+  </div>
+
+  <div class="equity-map__stage">
+    <div class="equity-map__host" #mapHost></div>
+    @if (loadError()) {
+      <p class="equity-map__error" role="alert">{{ loadError() }}</p>
+    }
+  </div>
+
+  <div class="equity-map__legend">
+    @switch (layer()) {
+      @case ('equity') {
+        <span class="scale">
+          Needs support
+          <i class="scale__bar" [style.background]="equityGradient"></i>
+          Well served
+        </span>
+      }
+      @case ('grid') {
+        <span class="swatch"><i style="background: var(--mg-danger)"></i>Peak demand</span>
+        <span class="swatch"><i style="background: var(--mg-warn)"></i>Balanced</span>
+        <span class="swatch"><i style="background: var(--mg-ok)"></i>Surplus</span>
+      }
+      @default {
+        <span class="scale">
+          Lower
+          <i class="scale__steps">
+            @for (step of sequentialSteps; track step) {
+              <b [style.background]="step"></b>
+            }
+          </i>
+          Higher
+        </span>
+      }
+    }
+    <span class="equity-map__note">
+      Circle size is installed residential kW.
+      @if (unmappedCount() === 1) {
+        One locality is shown grey — it is not ranked.
+      } @else if (unmappedCount() > 1) {
+        {{ unmappedCount() }} localities are shown grey — they are not ranked.
+      }
+    </span>
+  </div>
+</div>

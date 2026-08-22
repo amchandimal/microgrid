@@ -1,0 +1,138 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.rebate__svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.rebate__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.picker select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--mg-border);
+  border-radius: 7px;
+  background: var(--mg-surface-2);
+  color: var(--mg-text);
+  font: inherit;
+  font-size: 0.75rem;
+  max-width: 18rem;
+}
+
+.rebate__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.85rem;
+  font-size: 0.72rem;
+  color: var(--mg-text-dim);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+}
+
+.key {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- marks ----------------------------------------------------------------- */
+
+.line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.line--accounts { stroke: var(--mg-series-1); }
+.line--eligible { stroke: var(--mg-series-2); }
+
+/* The wash is the point of the chart: everyone entitled and not receiving. */
+.gap {
+  fill: var(--mg-series-2);
+  opacity: 0.12;
+}
+
+.grid {
+  stroke: var(--mg-grid-line);
+  stroke-width: 1;
+}
+
+.tick {
+  fill: var(--mg-text-dim);
+  font-size: 10px;
+}
+
+.end {
+  fill: var(--mg-text);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.end__what {
+  fill: var(--mg-text-dim);
+  font-size: 9px;
+  font-weight: 400;
+}
+
+/* --- hover ----------------------------------------------------------------- */
+
+.crosshair {
+  stroke: var(--mg-text-dim);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  pointer-events: none;
+}
+
+.tip { pointer-events: none; }
+
+.tip__box {
+  fill: var(--mg-surface);
+  stroke: var(--mg-border);
+  stroke-width: 1;
+  filter: drop-shadow(0 4px 12px rgb(0 0 0 / 0.18));
+}
+
+.tip__fy {
+  fill: var(--mg-text);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.tip__row {
+  fill: var(--mg-text-dim);
+  font-size: 10px;
+}
+
+.tip__value {
+  fill: var(--mg-text);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tip__dot { font-size: 9px; }

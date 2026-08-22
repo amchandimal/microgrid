@@ -1,0 +1,95 @@
+<div class="chart" #host>
+  <div class="chart__legend">
+    <span><i class="key" style="background: var(--mg-series-1)"></i>Residential</span>
+    <span><i class="key" style="background: var(--mg-series-2)"></i>Commercial</span>
+    <span><i class="key" style="background: var(--mg-series-3)"></i>Power stations</span>
+  </div>
+
+  <svg
+    class="chart__svg"
+    [attr.width]="width()"
+    [attr.height]="totalHeight"
+    [attr.viewBox]="'0 0 ' + width() + ' ' + totalHeight"
+    role="img"
+    aria-label="Rooftop solar capacity and installations added each month, January 2001 to December 2025"
+    (mousemove)="onMove($event)"
+    (mouseleave)="onLeave()"
+  >
+    <!-- The provisional tail, shaded behind everything -->
+    @for (band of bands(); track band.x) {
+      <rect
+        class="band"
+        [attr.x]="band.x"
+        [attr.y]="capacityTop"
+        [attr.width]="band.width"
+        [attr.height]="installsTop + panelHeight - capacityTop"
+      />
+      <text class="band__label" [attr.x]="band.x - 6" [attr.y]="capacityTop - 1" text-anchor="end">
+        {{ band.label }} →
+      </text>
+    }
+
+    @for (panel of [capacityPanel(), installsPanel()]; track panel.title; let i = $index) {
+      <g>
+        <text class="panel__title" [attr.x]="left" [attr.y]="(i === 0 ? capacityTop : installsTop) - 12">
+          {{ panel.title }}
+          <tspan class="panel__unit">· {{ panel.unit }}</tspan>
+        </text>
+
+        @for (tick of panel.ticks; track tick.value) {
+          <line class="grid" [attr.x1]="left" [attr.x2]="width()" [attr.y1]="tick.y" [attr.y2]="tick.y" />
+          <text class="tick" [attr.x]="left - 8" [attr.y]="tick.y + 3" text-anchor="end">{{ tick.label }}</text>
+        }
+
+        @for (series of panel.series; track series.key) {
+          <polyline class="line" [attr.points]="series.path" [attr.stroke]="series.colour" />
+        }
+      </g>
+    }
+
+    <!-- Year ticks, once, under both panels -->
+    @for (year of yearTicks(); track year.label) {
+      <text class="tick" [attr.x]="year.x" [attr.y]="totalHeight - 6" text-anchor="middle">
+        {{ year.label }}
+      </text>
+    }
+
+    @if (hovered(); as h) {
+      <line
+        class="crosshair"
+        [attr.x1]="h.x"
+        [attr.x2]="h.x"
+        [attr.y1]="capacityTop"
+        [attr.y2]="installsTop + panelHeight"
+      />
+      <g class="tip" [attr.transform]="'translate(' + tooltipX(h.x) + ', ' + capacityTop + ')'">
+        <rect class="tip__box" width="168" height="118" rx="7" />
+        <text class="tip__month" x="10" y="18">{{ label(h.point.month) }}</text>
+
+        <text class="tip__head" x="10" y="38">kW added</text>
+        <text class="tip__row" x="10" y="53">
+          <tspan class="tip__dot" fill="var(--mg-series-1)">●</tspan> Residential
+        </text>
+        <text class="tip__value" x="158" y="53" text-anchor="end">{{ format(h.point.capacityResidentialKw) }}</text>
+        <text class="tip__row" x="10" y="67">
+          <tspan class="tip__dot" fill="var(--mg-series-2)">●</tspan> Commercial
+        </text>
+        <text class="tip__value" x="158" y="67" text-anchor="end">{{ format(h.point.capacityCommercialKw) }}</text>
+        <text class="tip__row" x="10" y="81">
+          <tspan class="tip__dot" fill="var(--mg-series-3)">●</tspan> Power stations
+        </text>
+        <text class="tip__value" x="158" y="81" text-anchor="end">{{ format(h.point.capacityPowerStationsKw) }}</text>
+
+        <text class="tip__head" x="10" y="99">Systems</text>
+        <text class="tip__row" x="10" y="112">
+          <tspan class="tip__dot" fill="var(--mg-series-1)">●</tspan> Residential
+        </text>
+        <text class="tip__value" x="158" y="112" text-anchor="end">{{ format(h.point.installsResidential) }}</text>
+      </g>
+    }
+  </svg>
+
+  @for (band of bands(); track band.detail) {
+    <p class="chart__note">{{ band.detail }}</p>
+  }
+</div>

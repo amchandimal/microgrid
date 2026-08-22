@@ -1,0 +1,82 @@
+<div class="consumption">
+  <div class="consumption__controls">
+    <div class="toggle" role="group" aria-label="Which sectors to show">
+      <button type="button" [class.on]="view() === 'all'" (click)="setView('all')">
+        All sectors
+      </button>
+      <button type="button" [class.on]="view() === 'households'" (click)="setView('households')">
+        Households only
+      </button>
+    </div>
+
+    <div class="consumption__legend">
+      <span><i class="key" style="background: var(--mg-series-1)"></i>Households</span>
+      @if (view() === 'all') {
+        <span><i class="key" style="background: var(--mg-series-2)"></i>Commercial</span>
+        <span><i class="key" style="background: var(--mg-series-3)"></i>Industrial</span>
+      }
+    </div>
+  </div>
+
+  <ul class="bars">
+    @for (row of rows(); track row.postcode) {
+      <li
+        class="bar"
+        (mouseenter)="onEnter(row, $event)"
+        (mousemove)="onEnter(row, $event)"
+        (mouseleave)="onLeave()"
+      >
+        <span class="bar__label">{{ row.postcode }}</span>
+        <span class="bar__track">
+          <span class="bar__fill" [style.width.%]="row.barPct">
+            <span
+              class="seg seg--1"
+              [style.width.%]="row.widths.households"
+              [attr.title]="'Households ' + mwh(row.households) + ' MWh'"
+            ></span>
+            @if (view() === 'all') {
+              <span
+                class="seg seg--2"
+                [style.width.%]="row.widths.commercial"
+                [attr.title]="'Commercial ' + mwh(row.commercial) + ' MWh'"
+              ></span>
+              <span
+                class="seg seg--3"
+                [style.width.%]="row.widths.industrial"
+                [attr.title]="'Industrial ' + mwh(row.industrial) + ' MWh'"
+              ></span>
+            }
+          </span>
+        </span>
+        <span class="bar__value">{{ endLabel(row) }}</span>
+      </li>
+    }
+  </ul>
+
+  @if (hovered(); as h) {
+    <div class="tip" [ngStyle]="tipStyle(h.x, h.y)">
+      <strong>{{ h.row.postcode }}</strong>
+      <p class="tip__suburbs">{{ suburbList(h.row) }}</p>
+      <dl>
+        <div>
+          <dt><i class="key key--dot" style="background: var(--mg-series-1)"></i>Households</dt>
+          <dd>{{ mwh(h.row.households) }} MWh</dd>
+        </div>
+        <div>
+          <dt><i class="key key--dot" style="background: var(--mg-series-2)"></i>Commercial</dt>
+          <dd>{{ mwh(h.row.commercial) }} MWh</dd>
+        </div>
+        <div>
+          <dt><i class="key key--dot" style="background: var(--mg-series-3)"></i>Industrial</dt>
+          <dd>{{ mwh(h.row.industrial) }} MWh</dd>
+        </div>
+      </dl>
+      @if (h.row.perDwelling !== null) {
+        <p class="tip__per">
+          {{ h.row.perDwelling }} MWh per dwelling across
+          {{ h.row.accounts | number }} domestic accounts
+        </p>
+      }
+    </div>
+  }
+</div>

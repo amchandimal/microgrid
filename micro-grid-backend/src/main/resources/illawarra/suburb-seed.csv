@@ -1,0 +1,89 @@
+# Wollongong LGA localities: postcode, and a point to draw them at.
+#
+# The solar data is reported by suburb and the consumption data by postcode,
+# so nothing joins without this. The postcodes are the mapping given in the
+# Council brief, extended with the handful of localities that appear in the
+# solar CSV but not in the brief (Windang, Kembla Heights, Cordeaux,
+# Dombarton, Darkes Forest, Maddens Plains, Lilyvale, Woronora Dam).
+#
+# lat/lng are APPROXIMATE suburb centres, hand-seeded for the demo map at
+# roughly half a kilometre of accuracy - enough to place a suburb on the right
+# part of the coast, not survey data. The anchors marked "grid" are taken from
+# the site and battery positions already in GridService, so the equity layer
+# lines up with the hex overlay. For production, replace this column with the
+# ABS Suburb and Locality (SAL) centroids, which are published as a shapefile.
+#
+# A locality with no point is still ranked and still appears in the league
+# table and the hotspot list; it is simply not drawn on the map. A locality
+# with no postcode falls back to the LGA median for the consumption term of
+# the equity index, and says so in its detail panel.
+#
+# locality,postcode,lat,lng
+Helensburgh,2508,-34.1786,150.9964
+Otford,2508,-34.2100,150.9990
+Lilyvale,2508,-34.2050,150.9800
+Stanwell Tops,2508,-34.2225,150.9700
+Stanwell Park,2508,-34.2278,150.9856
+Coalcliff,2508,-34.2400,150.9750
+Darkes Forest,2508,-34.2350,150.9200
+Maddens Plains,2508,-34.2600,150.9450
+Woronora Dam,2508,-34.1760,150.9290
+Clifton,2515,-34.2550,150.9683
+Scarborough,2515,-34.2683,150.9600
+Wombarra,2515,-34.2789,150.9528
+Coledale,2515,-34.2917,150.9439
+Austinmer,2515,-34.3050,150.9300
+Thirroul,2515,-34.3153,150.9236
+Bulli,2516,-34.3383,150.9161
+Woonona,2517,-34.3550,150.9100
+Russell Vale,2517,-34.3750,150.8990
+Bellambi,2518,-34.3667,150.9150
+East Corrimal,2518,-34.3720,150.9150
+Corrimal,2518,-34.3778,150.9044
+Tarrawanna,2518,-34.3800,150.8900
+Towradgi,2518,-34.3861,150.9100
+Fernhill,2519,-34.3830,150.8880
+Balgownie,2519,-34.3900,150.8800
+Mount Ousley,2519,-34.3900,150.8700
+Fairy Meadow,2519,-34.3944,150.8983
+Mount Pleasant,2519,-34.3950,150.8850
+North Wollongong,2500,-34.4150,150.8990
+Gwynneville,2500,-34.4150,150.8800
+Keiraville,2500,-34.4150,150.8700
+Mount Keira,2500,-34.4200,150.8500
+Wollongong,2500,-34.4278,150.8931
+West Wollongong,2500,-34.4300,150.8700
+Mangerton,2500,-34.4380,150.8790
+Mount Saint Thomas,2500,-34.4450,150.8750
+Coniston,2500,-34.4450,150.8880
+Spring Hill,2500,-34.4550,150.8830
+Figtree,2525,-34.4383,150.8536
+Mount Kembla,2526,-34.4400,150.8100
+Kembla Heights,2526,-34.4450,150.8200
+Unanderra,2526,-34.4496,150.8501
+Cordeaux Heights,2526,-34.4550,150.8300
+Farmborough Heights,2526,-34.4600,150.8400
+Kembla Grange,2526,-34.4900,150.8100
+Cordeaux,2526,-34.4300,150.7700
+Berkeley,2506,-34.4667,150.8492
+Cringila,2502,-34.4700,150.8750
+Port Kembla,2505,-34.4783,150.9022
+Lake Heights,2502,-34.4800,150.8700
+Warrawong,2502,-34.4881,150.8869
+Primbee,2502,-34.4950,150.8750
+Windang,2528,-34.5333,150.8700
+Brownsville,2530,-34.5000,150.8200
+Dapto,2530,-34.4986,150.7947
+Kanahooka,2530,-34.5050,150.8300
+Horsley,2530,-34.5100,150.8100
+Dombarton,2530,-34.5100,150.7300
+Koonawarra,2530,-34.5200,150.8200
+Wongawilli,2530,-34.5200,150.7500
+Huntley,2530,-34.5300,150.7500
+Avondale,2530,-34.5300,150.7800
+Penrose,2530,-34.5400,150.7300
+Cleveland,2530,-34.5400,150.7700
+Haywards Bay,2530,-34.5450,150.8250
+Yallah,2530,-34.5500,150.8000
+Marshall Mount,2530,-34.5600,150.7700
+Avon,2530,,

@@ -1,0 +1,193 @@
+:host {
+  display: block;
+}
+
+.consumption {
+  position: relative;
+}
+
+/* --- controls -------------------------------------------------------------- */
+
+.consumption__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.toggle {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--mg-border);
+  border-radius: 8px;
+  background: var(--mg-surface-2);
+
+  button {
+    padding: 0.3rem 0.6rem;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--mg-text-dim);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 550;
+    cursor: pointer;
+
+    &.on {
+      background: var(--mg-surface);
+      color: var(--mg-text);
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+    }
+  }
+}
+
+.consumption__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.85rem;
+  font-size: 0.72rem;
+  color: var(--mg-text-dim);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+}
+
+.key {
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.key--dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* --- bars ------------------------------------------------------------------ */
+
+.bars {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2px 0;
+  border-radius: 6px;
+
+  &:hover { background: var(--mg-surface-2); }
+}
+
+.bar__label {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--mg-text-dim);
+}
+
+.bar__track {
+  min-width: 0;
+}
+
+.bar__fill {
+  display: flex;
+  /* Capped rather than filling the row - the leftover is deliberate air. */
+  height: 16px;
+  border-radius: 0 4px 4px 0;
+  overflow: hidden;
+}
+
+.seg {
+  height: 100%;
+  /* The surface doing the separating: no strokes on the marks. */
+  box-shadow: 2px 0 0 var(--mg-surface);
+
+  &:last-child { box-shadow: none; }
+}
+
+.seg--1 { background: var(--mg-series-1); }
+.seg--2 { background: var(--mg-series-2); }
+.seg--3 { background: var(--mg-series-3); }
+
+.bar__value {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--mg-text);
+}
+
+/* --- tooltip --------------------------------------------------------------- */
+
+.tip {
+  position: absolute;
+  z-index: 5;
+  width: 16rem;
+  max-width: calc(100% - 1rem);
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--mg-border);
+  border-radius: 8px;
+  background: var(--mg-surface);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.2);
+  pointer-events: none;
+
+  strong {
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  dl {
+    margin: 0.45rem 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    div {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    dt {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.72rem;
+      color: var(--mg-text-dim);
+    }
+
+    dd {
+      margin: 0;
+      font-size: 0.72rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--mg-text);
+    }
+  }
+}
+
+.tip__suburbs,
+.tip__per {
+  margin: 0.2rem 0 0;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: var(--mg-text-dim);
+}
+
+.tip__per {
+  margin-top: 0.45rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--mg-border);
+}

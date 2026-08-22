@@ -1,0 +1,404 @@
+<div class="council">
+  <!-- Header ------------------------------------------------------------- -->
+  <header class="council__head">
+    <div>
+      <h1>Energy Equity Dashboard</h1>
+      <p>
+        {{ summary()?.lga ?? 'Wollongong City Council' }}
+        @if (summary(); as s) { &middot; {{ s.period }} }
+      </p>
+    </div>
+    <div class="council__session">
+      <span class="who">Signed in as {{ displayName() }}</span>
+      <button type="button" class="ghost" (click)="signOut()">Sign out</button>
+    </div>
+  </header>
+
+  @if (loadFailed()) {
+    <p class="alert" role="alert">
+      Could not load the council data. Check that the API is running on
+      <code>/api/council</code> and that this session is still signed in.
+    </p>
+  }
+
+  <!-- 1. KPI strip ------------------------------------------------------- -->
+  @if (summary(); as s) {
+    <section class="kpis" aria-label="Headline figures">
+      <article class="kpi">
+        <span class="kpi__label">Rooftop systems</span>
+        <span class="kpi__value">{{ s.totalInstallations | number }}</span>
+        <span class="kpi__meta">{{ s.residentialInstallations | number }} residential · {{ s.commercialInstallations | number }} commercial</span>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">PV density</span>
+        <span class="kpi__value">{{ s.pvDensityPct }}<small>%</small></span>
+        <span class="kpi__meta">of {{ s.housesInLga | number }} houses in the LGA</span>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">Annual bill savings</span>
+        <span class="kpi__value">${{ (s.annualSavingsAud / 1000000) | number: '1.1-1' }}<small>M</small></span>
+        <span class="kpi__meta">~${{ s.annualSavingsPerSystemAud | number }} a year per new system</span>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">CO₂ offset</span>
+        <span class="kpi__value">{{ (s.annualCo2OffsetTonnes / 1000) | number: '1.0-0' }}<small>kt</small></span>
+        <span class="kpi__meta">a year, all installations</span>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">Average bill</span>
+        <span class="kpi__value">${{ s.avgAnnualBillAud | number }}</span>
+        <span class="kpi__meta">{{ s.avgGridCostCkwh }}c/kWh grid cost · NSW flat tariff</span>
+      </article>
+      @if (s.rebateGap; as gap) {
+        <article class="kpi kpi--alert">
+          <span class="kpi__label">Missing out on rebates</span>
+          <span class="kpi__value">{{ (gap.missingOut / 1000) | number: '1.0-0' }}<small>k</small></span>
+          <span class="kpi__meta">NSW households eligible and not claiming · {{ gap.takeUpPct }}% take-up</span>
+        </article>
+      }
+    </section>
+
+    @if (talkingPoint(); as point) {
+      <p class="council__point">{{ point }}</p>
+    }
+  }
+
+  <!-- 2. Equity map + 3. Hotspots ---------------------------------------- -->
+  <div class="council__grid">
+    <section class="panel panel--map">
+      <div class="panel__head">
+        <h2>Equity map</h2>
+        <span class="panel__sub">
+          @if (equityMap(); as m) { {{ m.mappedCount }} of {{ m.localityCount }} localities placed }
+        </span>
+      </div>
+      @if (equityMap(); as m) {
+        <app-equity-map
+          [localities]="m.localities"
+          [gridStress]="gridStress()"
+          (selectLocality)="openSuburb($event)"
+        />
+      } @else {
+        <p class="loading">Loading the map…</p>
+      }
+    </section>
+
+    <section class="panel panel--hotspots">
+      <div class="panel__head">
+        <h2>Suburbs needing intervention</h2>
+        <span class="count">{{ hotspots().length }}</span>
+      </div>
+      <ol class="hotspots">
+        @for (suburb of hotspots(); track suburb.locality) {
+          <li>
+            <button type="button" class="hotspot" (click)="openSuburb(suburb.locality)">
+              <span class="hotspot__top">
+                <strong>{{ suburb.locality }}</strong>
+                <span class="hotspot__score">{{ suburb.equityScore }}</span>
+              </span>
+              <span class="hotspot__figures">
+                {{ suburb.resInstallsAlltime | number }} systems ·
+                {{ suburb.resKwAlltime | number: '1.0-0' }} kW ·
+                {{ pct(suburb.resYoyPct) }} a year
+              </span>
+              <span class="hotspot__action">{{ suburb.action }}</span>
+              <span class="hotspot__why">{{ suburb.actionReason }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li class="loading">No hotspots yet — still loading the ranking.</li>
+        }
+      </ol>
+    </section>
+  </div>
+
+  <!-- League table -------------------------------------------------------- -->
+  <section class="panel">
+    <div class="panel__head">
+      <h2>Every locality, ranked</h2>
+      <div class="filters">
+        <input
+          type="search"
+          placeholder="Filter by suburb or postcode…"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+        />
+        <label class="check">
+          <input
+            type="checkbox"
+            [checked]="hotspotsOnly()"
+            (change)="hotspotsOnly.set($any($event.target).checked)"
+          />
+          Hotspots only
+        </label>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="league">
+        <thead>
+          <tr>
+            <th><button type="button" (click)="sortBy('rank')">#{{ sortIndicator('rank') }}</button></th>
+            <th><button type="button" (click)="sortBy('locality')">Locality {{ sortIndicator('locality') }}</button></th>
+            <th>Postcode</th>
+            <th class="num"><button type="button" (click)="sortBy('resInstallsAlltime')">Systems {{ sortIndicator('resInstallsAlltime') }}</button></th>
+            <th class="num"><button type="button" (click)="sortBy('resKwAlltime')">kW {{ sortIndicator('resKwAlltime') }}</button></th>
+            <th class="num"><button type="button" (click)="sortBy('resYoyPct')">YoY {{ sortIndicator('resYoyPct') }}</button></th>
+            <th class="num"><button type="button" (click)="sortBy('pvDensityPct')">Per 100 homes {{ sortIndicator('pvDensityPct') }}</button></th>
+            <th class="num"><button type="button" (click)="sortBy('domesticMwhPerDwelling')">MWh/dwelling {{ sortIndicator('domesticMwhPerDwelling') }}</button></th>
+            <th class="num"><button type="button" (click)="sortBy('equityScore')">Equity {{ sortIndicator('equityScore') }}</button></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (suburb of visibleSuburbs(); track suburb.locality) {
+            <tr [class.is-hotspot]="suburb.hotspot" (click)="openSuburb(suburb.locality)">
+              <td class="num muted">{{ suburb.rank ?? '—' }}</td>
+              <td>
+                {{ suburb.locality }}
+                @if (suburb.hotspot) { <span class="tag tag--hotspot">hotspot</span> }
+                @if (!suburb.ranked) { <span class="tag">not ranked</span> }
+              </td>
+              <td class="muted">{{ suburb.postcode ?? '—' }}</td>
+              <td class="num">{{ suburb.resInstallsAlltime | number }}</td>
+              <td class="num">{{ suburb.resKwAlltime | number: '1.0-0' }}</td>
+              <td class="num">{{ pct(suburb.resYoyPct) }}</td>
+              <td class="num">{{ suburb.pvDensityPct ?? '—' }}</td>
+              <td class="num">{{ suburb.domesticMwhPerDwelling ?? '—' }}</td>
+              <td class="num strong">{{ suburb.equityScore ?? '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (league(); as l) {
+      <details class="method">
+        <summary>How the equity score is calculated</summary>
+        <p class="method__formula"><code>{{ l.methodology.formula }}</code></p>
+        <ul class="method__terms">
+          @for (term of l.methodology.terms; track term.name) {
+            <li>
+              <strong>{{ term.weight * 100 }}% · {{ term.name }}</strong>
+              @if (term.inverted) { <span class="tag">inverted</span> }
+              <span>{{ term.source }}</span>
+            </li>
+          }
+        </ul>
+        <p class="method__note">{{ l.methodology.hotspotRule }}</p>
+        <p class="method__note">{{ l.methodology.dwellingEstimate }}</p>
+        <ul class="method__notes">
+          @for (note of l.methodology.notes; track note) { <li>{{ note }}</li> }
+        </ul>
+      </details>
+    }
+  </section>
+
+  <!-- 4. Growth trend ------------------------------------------------------ -->
+  <section class="panel">
+    <div class="panel__head">
+      <h2>Solar added each month, 2001–2025</h2>
+    </div>
+    @if (trend(); as t) {
+      <app-trend-chart [trend]="t" />
+      <p class="source">
+        @for (source of t.sources; track source.label) { {{ source.source }} }
+      </p>
+    } @else {
+      <p class="loading">Loading the series…</p>
+    }
+  </section>
+
+  <!-- 5. Consumption ------------------------------------------------------- -->
+  <section class="panel">
+    <div class="panel__head">
+      <h2>Where the electricity goes</h2>
+    </div>
+    @if (consumption(); as c) {
+      <p class="panel__lede">{{ c.headline }}</p>
+      <app-consumption-chart [postcodes]="c.postcodes" />
+      <p class="source">{{ c.note }}</p>
+      <p class="source">
+        @for (source of c.sources; track source.label) { {{ source.source }} }
+      </p>
+    } @else {
+      <p class="loading">Loading consumption…</p>
+    }
+  </section>
+
+  <!-- 6. Rebates + 7. Live grid -------------------------------------------- -->
+  <div class="council__grid">
+    <section class="panel">
+      <div class="panel__head">
+        <h2>Rebate take-up</h2>
+      </div>
+      @if (rebates(); as r) {
+        @if (r.headlineGap; as gap) {
+          <p class="panel__lede">
+            In {{ gap.fy }}, <strong>{{ gap.accounts | number }}</strong> NSW households
+            received the {{ gap.program }} out of
+            <strong>{{ gap.eligible | number }}</strong> estimated to be eligible —
+            a take-up of {{ gap.takeUpPct }}%. The
+            <strong>{{ gap.missingOut | number }}</strong> in the gap are people
+            entitled to money off their bill who are not getting it.
+          </p>
+        }
+        <app-rebate-chart [rebates]="r" />
+        <p class="eapa">
+          EAPA vouchers, {{ r.eapa.fy }}: {{ r.eapa.electricityApplications | number }}
+          electricity and {{ r.eapa.gasApplications | number }} gas applications approved,
+          worth ${{ (r.eapa.valueAud / 1000000) | number: '1.1-1' }}M statewide.
+        </p>
+        <p class="source">
+          @for (source of r.sources; track source.label) { {{ source.source }} }
+        </p>
+      } @else {
+        <p class="loading">Loading rebates…</p>
+      }
+    </section>
+
+    <section class="panel">
+      <div class="panel__head">
+        <h2>Live grid</h2>
+        @if (gridStress(); as g) {
+          <span class="panel__sub">as at {{ asOf(g.asOf) }}</span>
+        }
+      </div>
+      @if (gridStress(); as g) {
+        <div class="grid-stats">
+          <div>
+            <span class="grid-stats__value">{{ g.peakNow }}</span>
+            <span class="grid-stats__label">suburbs in peak demand now</span>
+          </div>
+          <div>
+            <span class="grid-stats__value">{{ g.exportConstrainedNow }}</span>
+            <span class="grid-stats__label">export constrained now</span>
+          </div>
+          <div>
+            <span class="grid-stats__value">{{ g.areas.length }}</span>
+            <span class="grid-stats__label">suburbs sampled</span>
+          </div>
+        </div>
+        <ul class="stress">
+          @for (area of g.areas.slice(0, 12); track area.id) {
+            <li>
+              <span class="stress__state" [attr.data-state]="area.state">
+                {{ stateLabel(area.state) }}
+              </span>
+              <span class="stress__name">{{ area.name }}</span>
+              <span class="stress__peak">{{ area.pctDayInPeak }}% of the day in peak</span>
+              @if (area.exportConstrained) { <span class="tag">export capped</span> }
+            </li>
+          }
+        </ul>
+        <p class="source">{{ g.note }}</p>
+      } @else {
+        <p class="loading">Reading the network…</p>
+      }
+    </section>
+  </div>
+</div>
+
+<!-- Detail drawer ---------------------------------------------------------- -->
+@if (detailLoading() || detail()) {
+  <div class="drawer-scrim" (click)="closeDetail()"></div>
+  <aside class="drawer" role="dialog" aria-label="Locality detail">
+    <button type="button" class="drawer__close" (click)="closeDetail()" title="Close">&times;</button>
+
+    @if (detailLoading()) {
+      <p class="loading">Loading…</p>
+    }
+
+    @if (detail(); as d) {
+      <header class="drawer__head">
+        <h2>{{ d.suburb.locality }}</h2>
+        <p>
+          Postcode {{ d.suburb.postcode ?? 'not mapped' }}
+          @if (d.suburb.ranked) {
+            &middot; ranked {{ d.suburb.rank }} of {{ rankedCount() }}
+          } @else {
+            &middot; not ranked
+          }
+        </p>
+        @if (d.suburb.hotspot) {
+          <p class="drawer__action">
+            <strong>{{ d.suburb.action }}</strong>
+            {{ d.suburb.actionReason }}
+          </p>
+        }
+      </header>
+
+      <dl class="drawer__stats">
+        <div><dt>Equity score</dt><dd>{{ d.suburb.equityScore ?? '—' }}</dd></div>
+        <div><dt>Systems since 2001</dt><dd>{{ d.suburb.resInstallsAlltime | number }}</dd></div>
+        <div><dt>Installed capacity</dt><dd>{{ d.suburb.resKwAlltime | number: '1.0-0' }} kW</dd></div>
+        <div><dt>Average system</dt><dd>{{ d.suburb.avgSystemKw ?? '—' }} kW</dd></div>
+        <div><dt>Added in FY 24-25</dt><dd>{{ d.suburb.resInstallsFy | number }} systems</dd></div>
+        <div><dt>Growth year on year</dt><dd>{{ pct(d.suburb.resYoyPct) }}</dd></div>
+        @if (d.suburb.resInstallsCurrent !== null) {
+          <div>
+            <dt>To Dec 2025</dt>
+            <dd>{{ d.suburb.resInstallsCurrent | number }} systems</dd>
+          </div>
+        }
+        <div><dt>Commercial</dt><dd>{{ d.suburb.comInstallsAlltime | number }} · {{ d.suburb.comKwAlltime | number: '1.0-0' }} kW</dd></div>
+      </dl>
+
+      @if (d.suburb.solarScore !== null) {
+        <div class="drawer__terms">
+          <h3>What the score is made of</h3>
+          <ul>
+            <li><span>Solar density (50%)</span><i [style.width.%]="d.suburb.solarScore * 100"></i><b>{{ d.suburb.solarScore }}</b></li>
+            <li><span>Growth (20%)</span><i [style.width.%]="d.suburb.growthScore! * 100"></i><b>{{ d.suburb.growthScore }}</b></li>
+            <li><span>Consumption (30%, inverted)</span><i [style.width.%]="d.suburb.consumptionScore! * 100"></i><b>{{ d.suburb.consumptionScore }}</b></li>
+          </ul>
+        </div>
+      }
+
+      @if (d.consumption; as c) {
+        <div class="drawer__section">
+          <h3>Postcode {{ c.postcode }} electricity, 2021/22</h3>
+          <dl class="drawer__stats">
+            <div><dt>Households</dt><dd>{{ (c.domesticMwh + c.controlledLoadMwh) | number: '1.0-0' }} MWh</dd></div>
+            <div><dt>Commercial</dt><dd>{{ c.commercialMwh | number: '1.0-0' }} MWh</dd></div>
+            <div><dt>Industrial</dt><dd>{{ c.industrialMwh | number: '1.0-0' }} MWh</dd></div>
+            <div><dt>Per dwelling</dt><dd>{{ c.domesticMwhPerDwelling ?? '—' }} MWh</dd></div>
+            <div><dt>Domestic accounts</dt><dd>{{ c.domesticAccounts | number }}</dd></div>
+          </dl>
+        </div>
+      }
+
+      @if (detailGrid(); as g) {
+        <div class="drawer__section">
+          <h3>Network right now</h3>
+          <p class="drawer__grid" [attr.data-state]="g.state">
+            <strong>{{ stateLabel(g.state) }}</strong>
+            &middot; {{ g.pctDayInPeak }}% of the day in peak
+            &middot; ~{{ g.priceSignalCkwh }}c/kWh
+            @if (g.exportConstrained) { &middot; <em>export capped</em> }
+          </p>
+          <p class="drawer__nums">
+            supply {{ g.supplyKw | number: '1.0-0' }} kW ·
+            demand {{ g.demandKw | number: '1.0-0' }} kW
+            @if (g.batterySocPct !== null) { · community battery {{ g.batterySocPct }}% }
+          </p>
+        </div>
+      }
+
+      @if (d.postcodePeers.length) {
+        <div class="drawer__section">
+          <h3>Others in postcode {{ d.suburb.postcode }}</h3>
+          <ul class="peers">
+            @for (peer of d.postcodePeers; track peer.locality) {
+              <li>
+                <button type="button" (click)="openSuburb(peer.locality)">
+                  {{ peer.locality }}
+                  <span>{{ peer.equityScore ?? 'not ranked' }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    }
+  </aside>
+}

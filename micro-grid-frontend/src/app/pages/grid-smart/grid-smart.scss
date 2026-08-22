@@ -259,6 +259,21 @@ fieldset {
   .glyph { font-size: 1.5rem; }
 }
 
+// The Council tile is a door out of the wizard rather than a fourth answer to
+// the same question, so it is set apart instead of sitting in the run of three.
+.choices__council {
+  margin-top: 0.4rem;
+  border-style: dashed !important;
+  flex-wrap: wrap;
+
+  small {
+    flex-basis: 100%;
+    padding-left: 2.3rem;
+    font-size: 0.875rem;
+    color: var(--gs-ink-dim, #5b6472);
+  }
+}
+
 .check {
   display: flex;
   align-items: baseline;

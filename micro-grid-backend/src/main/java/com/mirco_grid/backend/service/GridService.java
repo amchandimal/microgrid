@@ -3,6 +3,7 @@ package com.mirco_grid.backend.service;
 import com.mirco_grid.backend.service.GridSite.SiteStatus;
 import com.mirco_grid.backend.service.GridSite.SiteType;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -300,17 +301,93 @@ public class GridService {
      * @return empty when nothing on the network is close enough to sample
      */
     public Optional<GridStatus> statusAt(double lat, double lng, ZonedDateTime when) {
+        return sample(lat, lng).map(neighbourhood -> neighbourhood.shape(when));
+    }
+
+    /**
+     * The same neighbourhood at every hour of one day.
+     *
+     * <p>Sampling the field is the expensive half and the time of day is only
+     * a pair of multipliers on top of it, so a whole day costs one sample
+     * rather than twenty-four. That is what makes "how much of the day does
+     * this suburb spend in peak" answerable across every suburb in the LGA in
+     * one request.
+     *
+     * @return twenty-four readings, midnight first, or empty when nothing on
+     *     the network is close enough to sample
+     */
+    public Optional<List<GridStatus>> dayAt(double lat, double lng, ZonedDateTime day) {
+        return sample(lat, lng).map(neighbourhood -> {
+            ZonedDateTime midnight = day.truncatedTo(ChronoUnit.DAYS);
+            List<GridStatus> hours = new ArrayList<>(24);
+            for (int hour = 0; hour < 24; hour++) {
+                hours.add(neighbourhood.shape(midnight.plusHours(hour)));
+            }
+            return hours;
+        });
+    }
+
+    /** Widens the radius once before giving up, for the rural fringe. */
+    private Optional<Neighbourhood> sample(double lat, double lng) {
         for (double radius : new double[] {NEIGHBOURHOOD_RADIUS_M, FALLBACK_RADIUS_M}) {
-            Optional<GridStatus> status = statusWithin(lat, lng, radius, when);
-            if (status.isPresent()) {
-                return status;
+            Optional<Neighbourhood> sampled = sampleWithin(lat, lng, radius);
+            if (sampled.isPresent()) {
+                return sampled;
             }
         }
         return Optional.empty();
     }
 
-    private Optional<GridStatus> statusWithin(
-            double lat, double lng, double radiusM, ZonedDateTime when) {
+    /**
+     * What the field says around one point, before the clock is applied.
+     *
+     * <p>Split out from the reading itself so the same sample can be shaped
+     * into any hour - see {@link #dayAt}.
+     */
+    private record Neighbourhood(
+            double lat, double lng, double radiusM,
+            double supplyAvg, double demandAvg, int cellCount) {
+
+        /** The reading this neighbourhood gives at one moment. */
+        GridStatus shape(ZonedDateTime when) {
+            double hour = when.getHour() + when.getMinute() / 60.0;
+            double supplyKw = supplyAvg * solarFactor(hour);
+            double demandKw = demandAvg * loadFactor(hour);
+            double surplusKw = supplyKw - demandKw;
+
+            GridStatus.State state;
+            if (supplyKw > demandKw * 1.1) {
+                state = GridStatus.State.SURPLUS;
+            } else if (demandKw > supplyKw * 1.1) {
+                state = GridStatus.State.PEAK;
+            } else {
+                state = GridStatus.State.BALANCED;
+            }
+
+            // The local network can only take back so much. A neighbourhood
+            // generating half again what it uses is pushing against that limit.
+            boolean exportConstrained = surplusKw > demandKw * 1.5;
+
+            GridStatus.CommunityBattery battery = nearestBattery(lat, lng);
+
+            return new GridStatus(
+                    String.format("within %.1f km of %.4f, %.4f", radiusM / 1000, lat, lng),
+                    round(lat, 6),
+                    round(lng, 6),
+                    when.toOffsetDateTime(),
+                    cellCount,
+                    round(supplyKw, 1),
+                    round(demandKw, 1),
+                    round(surplusKw, 1),
+                    state,
+                    exportConstrained,
+                    round(priceSignal(supplyKw, demandKw), 1),
+                    battery == null ? null : batterySocPct(hour),
+                    battery);
+        }
+    }
+
+    private Optional<Neighbourhood> sampleWithin(double lat, double lng, double radiusM) {
 
         double dLat = radiusM / 110950.0;
         double dLng = radiusM / (111320.0 * Math.cos(Math.toRadians(lat)));
@@ -332,41 +409,7 @@ public class GridService {
         if (counted == 0) {
             return Optional.empty();
         }
-
-        double hour = when.getHour() + when.getMinute() / 60.0;
-        double supplyKw = supplyAvg * solarFactor(hour);
-        double demandKw = demandAvg * loadFactor(hour);
-        double surplusKw = supplyKw - demandKw;
-
-        GridStatus.State state;
-        if (supplyKw > demandKw * 1.1) {
-            state = GridStatus.State.SURPLUS;
-        } else if (demandKw > supplyKw * 1.1) {
-            state = GridStatus.State.PEAK;
-        } else {
-            state = GridStatus.State.BALANCED;
-        }
-
-        // The local network can only take back so much. A neighbourhood
-        // generating half again what it uses is pushing against that limit.
-        boolean exportConstrained = surplusKw > demandKw * 1.5;
-
-        GridStatus.CommunityBattery battery = nearestBattery(lat, lng);
-
-        return Optional.of(new GridStatus(
-                String.format("within %.1f km of %.4f, %.4f", radiusM / 1000, lat, lng),
-                round(lat, 6),
-                round(lng, 6),
-                when.toOffsetDateTime(),
-                counted,
-                round(supplyKw, 1),
-                round(demandKw, 1),
-                round(surplusKw, 1),
-                state,
-                exportConstrained,
-                round(priceSignal(supplyKw, demandKw), 1),
-                battery == null ? null : batterySocPct(hour),
-                battery));
+        return Optional.of(new Neighbourhood(lat, lng, radiusM, supplyAvg, demandAvg, counted));
     }
 
     /**
