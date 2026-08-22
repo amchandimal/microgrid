@@ -274,6 +274,11 @@
     &--household { background: var(--mg-household); }
   }
 
+  .legend-warn {
+    color: var(--mg-danger);
+    font-weight: 500;
+  }
+
   .legend-scale {
     gap: 0.5rem;
 
