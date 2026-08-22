@@ -1,0 +1,27 @@
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark">⚡</span>
+      <div>
+        <strong>Micro-Grid</strong>
+        <small>Peer-to-peer energy trading · Illawarra</small>
+      </div>
+    </div>
+    <nav class="topbar__nav">
+      <a class="active" href="javascript:void(0)">Overview</a>
+      <a href="javascript:void(0)">Trades</a>
+      <a href="javascript:void(0)">Settings</a>
+    </nav>
+  </header>
+
+  <main class="split">
+    <section class="split__left">
+      <app-map-panel />
+    </section>
+    <section class="split__right">
+      <app-dashboard-panel />
+    </section>
+  </main>
+</div>
+
+<router-outlet />

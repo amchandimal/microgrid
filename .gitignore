@@ -1,0 +1,92 @@
+# ---------------------------------------------------------------
+# Root .gitignore for micro-grid (Spring Boot backend + Angular frontend)
+# Sub-projects keep their own .gitignore; this covers the whole repo.
+# ---------------------------------------------------------------
+
+# --- Secrets / local config ---
+.env
+.env.*
+!.env.example
+*.local.properties
+application-local.properties
+application-local.yml
+application-secrets.*
+*.pem
+*.key
+*.p12
+*.jks
+
+# --- Java / Maven (backend) ---
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.war
+*.ear
+!**/.mvn/wrapper/maven-wrapper.jar
+hs_err_pid*
+replay_pid*
+
+# --- Gradle (in case it shows up) ---
+.gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# --- Node / Angular (frontend) ---
+node_modules/
+dist/
+tmp/
+out-tsc/
+bazel-out/
+.angular/
+.sass-cache/
+coverage/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.eslintcache
+testem.log
+typings/
+
+# --- Logs & databases ---
+*.log
+logs/
+*.sqlite
+*.sqlite3
+*.db
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- IDEs & editors ---
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
+.history/
+.settings/
+.project
+.classpath
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache/
+*.sublime-workspace
+*.swp
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

@@ -1,0 +1,112 @@
+<div class="dash">
+  <header class="dash__head">
+    <div>
+      <h2>Grid Dashboard</h2>
+      <p>Illawarra Region, NSW &middot; live snapshot</p>
+    </div>
+    <span class="badge">DEMO DATA</span>
+  </header>
+
+  <!-- Key metrics -->
+  <section class="cards">
+    <article class="card card--supplier">
+      <span class="card__label">Energy Suppliers</span>
+      <span class="card__value">{{ supplierCount() }}</span>
+      <span class="card__meta">{{ onlineSuppliers() }} online &middot; {{ totalCapacityKw() | number }} kW capacity</span>
+    </article>
+
+    <article class="card card--household">
+      <span class="card__label">Households</span>
+      <span class="card__value">{{ householdCount() }}</span>
+      <span class="card__meta">{{ onlineHouseholds() }} online &middot; {{ totalDemandKw() | number }} kW demand</span>
+    </article>
+
+    <article class="card card--buy">
+      <span class="card__label">Buying Price</span>
+      <span class="card__value">{{ buyPrice() | number: '1.2-2' }}<small>c/kWh</small></span>
+      <span class="card__meta up">▲ 4.2% vs yesterday</span>
+    </article>
+
+    <article class="card card--sell">
+      <span class="card__label">Selling Price</span>
+      <span class="card__value">{{ sellPrice() | number: '1.2-2' }}<small>c/kWh</small></span>
+      <span class="card__meta down">▼ 1.8% vs yesterday</span>
+    </article>
+  </section>
+
+  <!-- Spread strip -->
+  <section class="spread">
+    <div>
+      <span class="spread__label">Spread</span>
+      <strong>{{ spread() | number: '1.2-2' }} c/kWh</strong>
+    </div>
+    <div class="spread__bar">
+      <div class="spread__fill" [style.width.%]="margin()"></div>
+    </div>
+    <div class="spread__pct">{{ margin() }}%</div>
+  </section>
+
+  <!-- Price curve -->
+  <section class="panel">
+    <div class="panel__head">
+      <h3>Price curve — today</h3>
+      <div class="chart-key">
+        <span><i class="dot dot--buy"></i>Buy</span>
+        <span><i class="dot dot--sell"></i>Sell</span>
+      </div>
+    </div>
+    <div class="chart">
+      @for (p of priceCurve; track p.hour) {
+        <div class="chart__col" [title]="p.hour + ':00 — buy ' + p.buy + 'c / sell ' + p.sell + 'c'">
+          <div class="chart__bars">
+            <div class="bar bar--buy" [style.height]="barHeight(p.buy)"></div>
+            <div class="bar bar--sell" [style.height]="barHeight(p.sell)"></div>
+          </div>
+          <span class="chart__label">{{ p.hour }}</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Suppliers -->
+  <section class="panel">
+    <div class="panel__head">
+      <h3>Energy Suppliers</h3>
+      <span class="count">{{ supplierCount() }}</span>
+    </div>
+    <ul class="list">
+      @for (s of suppliers(); track s.id) {
+        <li class="row">
+          <span class="row__dot row__dot--supplier"></span>
+          <div class="row__main">
+            <strong>{{ s.name }}</strong>
+            <small>{{ s.suburb }}</small>
+          </div>
+          <span class="row__kw">{{ s.capacityKw | number }} kW</span>
+          <span [class]="statusClass(s.status)">{{ s.status }}</span>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <!-- Households -->
+  <section class="panel">
+    <div class="panel__head">
+      <h3>Households</h3>
+      <span class="count">{{ householdCount() }}</span>
+    </div>
+    <ul class="list">
+      @for (h of households(); track h.id) {
+        <li class="row">
+          <span class="row__dot row__dot--household"></span>
+          <div class="row__main">
+            <strong>{{ h.name }}</strong>
+            <small>{{ h.suburb }}</small>
+          </div>
+          <span class="row__kw">{{ h.capacityKw | number }} kW</span>
+          <span [class]="statusClass(h.status)">{{ h.status }}</span>
+        </li>
+      }
+    </ul>
+  </section>
+</div>
