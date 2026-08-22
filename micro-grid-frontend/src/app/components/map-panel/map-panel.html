@@ -30,16 +30,91 @@
       }
     </form>
 
+    <button
+      type="button"
+      class="region-btn"
+      [class.region-btn--on]="showHexGrid()"
+      (click)="toggleHexGrid()"
+      [attr.aria-pressed]="showHexGrid()"
+      title="Show or hide the demand/supply hex overlay"
+    >
+      Hex grid
+    </button>
+
     <button type="button" class="region-btn" (click)="resetView()">
       Illawarra, NSW
     </button>
   </div>
 
-  <div class="map-host" #mapHost></div>
+  <div class="map-stage">
+    <div class="map-host" #mapHost></div>
+
+    @if (selectedCell(); as cell) {
+      <aside class="cell-card">
+        <header class="cell-card__head">
+          <div>
+            <strong>Grid cell</strong>
+            <span class="cell-card__sub">
+              {{ cell.center[0].toFixed(4) }}, {{ cell.center[1].toFixed(4) }}
+            </span>
+            <span class="cell-card__sub">
+              {{ cell.sizeMetres >= 1000 ? (cell.sizeMetres / 1000) + ' km' : cell.sizeMetres + ' m' }}
+              hexagon &middot; {{ cell.areaHectares }} ha
+            </span>
+          </div>
+          <button type="button" class="cell-card__close" (click)="clearSelection()" title="Close">&times;</button>
+        </header>
+
+        <dl class="cell-card__stats">
+          <div>
+            <dt>Demand</dt>
+            <dd>{{ cell.demandKw }} kW</dd>
+          </div>
+          <div>
+            <dt>Supply</dt>
+            <dd>{{ cell.supplyKw }} kW</dd>
+          </div>
+          <div>
+            <dt>Net</dt>
+            <dd [class.is-deficit]="cell.netKw < 0" [class.is-surplus]="cell.netKw > 0">
+              {{ cell.netKw > 0 ? '+' : '' }}{{ cell.netKw }} kW
+            </dd>
+          </div>
+        </dl>
+
+        <div class="cell-card__scale">
+          <div class="cell-card__bar" [style.background]="legendGradient">
+            <span class="cell-card__pin" [style.left]="legendOffset(cell.balance)"></span>
+          </div>
+          <span class="cell-card__verdict">
+            {{ cell.netKw > 0 ? 'Net supplier' : cell.netKw < 0 ? 'Net consumer' : 'Balanced' }}
+            &middot; balance {{ cell.balance }}
+          </span>
+        </div>
+
+        @if (cellSiteNames(cell).length) {
+          <p class="cell-card__sites">Contains: {{ cellSiteNames(cell).join(', ') }}</p>
+        }
+      </aside>
+    }
+  </div>
 
   <div class="map-legend">
     <span><i class="dot dot--supplier"></i> Energy supplier</span>
     <span><i class="dot dot--household"></i> Household</span>
-    <span class="legend-count">{{ sites.length }} sites</span>
+
+    @if (showHexGrid()) {
+      <span class="legend-scale">
+        More demand
+        <i class="legend-scale__bar" [style.background]="legendGradient"></i>
+        More supply
+      </span>
+      <span class="legend-count">
+        {{ cellCount() }} cells &middot;
+        {{ cellMetres() >= 1000 ? (cellMetres() / 1000) + ' km' : cellMetres() + ' m' }} across
+      </span>
+    } @else {
+      <span class="legend-count">{{ sites.length }} sites</span>
+    }
   </div>
 </div>

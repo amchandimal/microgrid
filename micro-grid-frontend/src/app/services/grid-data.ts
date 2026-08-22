@@ -11,10 +11,31 @@ export class GridData {
   readonly illawarraCenter: [number, number] = [-34.5, 150.85];
   readonly illawarraZoom = 10;
 
-  /** Bounds roughly covering Helensburgh -> Kiama / Shellharbour. */
+  /**
+   * Corners of the furthest-out view the map is allowed to reach, clockwise
+   * from the top left.
+   */
+  readonly illawarraCorners: ReadonlyArray<readonly [number, number]> = [
+    [-34.30096546375846, 150.4584942105489], // top-left
+    [-34.24535851787525, 151.2975749695064], // top-right
+    [-34.667160230620375, 151.27766225100413], // bottom-right
+    [-34.69426357701455, 150.415922191682], // bottom-left
+  ];
+
+  /**
+   * Axis-aligned box enclosing every corner above, as [south-west, north-east].
+   * Leaflet only understands north-up rectangles and the supplied quad is
+   * slightly skewed, so we take the box that keeps all four corners in view.
+   */
   readonly illawarraBounds: [[number, number], [number, number]] = [
-    [-34.85, 150.55],
-    [-34.13, 151.05],
+    [
+      Math.min(...this.illawarraCorners.map(([lat]) => lat)),
+      Math.min(...this.illawarraCorners.map(([, lng]) => lng)),
+    ],
+    [
+      Math.max(...this.illawarraCorners.map(([lat]) => lat)),
+      Math.max(...this.illawarraCorners.map(([, lng]) => lng)),
+    ],
   ];
 
   getSites(): GridSite[] {
