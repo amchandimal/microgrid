@@ -12,6 +12,7 @@ import {
   Summary,
   Trend,
 } from '../models/council.models';
+import { apiUrl } from '../core/api';
 
 /**
  * Everything under `/api/council`.
@@ -28,7 +29,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class CouncilApi {
   private readonly http = inject(HttpClient);
-  private readonly base = '/api/council';
+  private readonly base = apiUrl('/api/council');
 
   private cache<T>(path: string): Observable<T> {
     return this.http

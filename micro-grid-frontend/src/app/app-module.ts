@@ -17,6 +17,7 @@ import { GridSmart } from './pages/grid-smart/grid-smart';
 import { CouncilLogin } from './pages/council-login/council-login';
 import { CouncilDashboard } from './pages/council-dashboard/council-dashboard';
 import { councilTokenInterceptor } from './interceptors/council-token-interceptor';
+import { recaptchaInterceptor } from './interceptors/recaptcha-interceptor';
 
 @NgModule({
   declarations: [
@@ -42,7 +43,12 @@ import { councilTokenInterceptor } from './interceptors/council-token-intercepto
     provideBrowserGlobalErrorListeners(),
     // The council interceptor attaches the session token, and only to
     // /api/council - the public endpoints and Nominatim share this client.
-    provideHttpClient(withFetch(), withInterceptors([councilTokenInterceptor])),
+    // The reCAPTCHA one runs after it and covers every /api call, because the
+    // backend verifies every URL in production. Neither touches Nominatim.
+    provideHttpClient(
+      withFetch(),
+      withInterceptors([councilTokenInterceptor, recaptchaInterceptor]),
+    ),
   ],
   bootstrap: [App]
 })

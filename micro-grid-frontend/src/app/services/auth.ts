@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { LoginResponse } from '../models/council.models';
+import { apiUrl } from '../core/api';
 
 /** What we keep about a signed-in session. */
 interface Session {
@@ -39,7 +40,7 @@ export class Auth {
 
   login(username: string, password: string): Observable<LoginResponse> {
     return this.http
-      .post<LoginResponse>('/api/auth/login', { username, password })
+      .post<LoginResponse>(apiUrl('/api/auth/login'), { username, password })
       .pipe(tap((response) => this.remember(response)));
   }
 

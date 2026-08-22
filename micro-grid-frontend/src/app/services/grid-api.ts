@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, shareReplay } from 'rxjs';
 import { GridCells, GridRegion, GridSite } from '../models/grid.models';
+import { apiUrl } from '../core/api';
 
 /** A viewport, in plain numbers - this service stays clear of Leaflet. */
 export interface ViewportBounds {
@@ -15,7 +16,7 @@ export interface ViewportBounds {
 @Injectable({ providedIn: 'root' })
 export class GridApi {
   private readonly http = inject(HttpClient);
-  private readonly base = '/api/grid';
+  private readonly base = apiUrl('/api/grid');
 
   /**
    * Extent and resolution limits. Cached - it never changes for a running
