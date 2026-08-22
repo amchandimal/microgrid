@@ -1,64 +1,25 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
+import { GridApi } from './grid-api';
 import { GridSite, PricePoint } from '../models/grid.models';
 
 /**
- * Dummy data source for the dashboard. Swap the method bodies for HTTP calls
- * to micro-grid-backend when the API is ready.
+ * Shared dashboard state.
+ *
+ * The network itself - the region, the sites and the overlay - comes from
+ * GridController. What is still local is the trading data, which has no
+ * backend yet.
  */
 @Injectable({ providedIn: 'root' })
 export class GridData {
-  /** Approx. centre of the Illawarra region, NSW (Wollongong). */
-  readonly illawarraCenter: [number, number] = [-34.5, 150.85];
-  readonly illawarraZoom = 10;
+  private readonly api = inject(GridApi);
 
-  /**
-   * Corners of the furthest-out view the map is allowed to reach, clockwise
-   * from the top left.
-   */
-  readonly illawarraCorners: ReadonlyArray<readonly [number, number]> = [
-    [-34.30096546375846, 150.4584942105489], // top-left
-    [-34.24535851787525, 151.2975749695064], // top-right
-    [-34.667160230620375, 151.27766225100413], // bottom-right
-    [-34.69426357701455, 150.415922191682], // bottom-left
-  ];
-
-  /**
-   * Axis-aligned box enclosing every corner above, as [south-west, north-east].
-   * Leaflet only understands north-up rectangles and the supplied quad is
-   * slightly skewed, so we take the box that keeps all four corners in view.
-   */
-  readonly illawarraBounds: [[number, number], [number, number]] = [
-    [
-      Math.min(...this.illawarraCorners.map(([lat]) => lat)),
-      Math.min(...this.illawarraCorners.map(([, lng]) => lng)),
-    ],
-    [
-      Math.max(...this.illawarraCorners.map(([lat]) => lat)),
-      Math.max(...this.illawarraCorners.map(([, lng]) => lng)),
-    ],
-  ];
-
-  getSites(): GridSite[] {
-    return [
-      // --- Energy suppliers ---
-      { id: 'S-01', name: 'Port Kembla Solar Farm', type: 'SUPPLIER', suburb: 'Port Kembla', lat: -34.4783, lng: 150.9022, capacityKw: 4200, status: 'ONLINE' },
-      { id: 'S-02', name: 'Illawarra Wind Co-op', type: 'SUPPLIER', suburb: 'Dapto', lat: -34.4986, lng: 150.7947, capacityKw: 2650, status: 'ONLINE' },
-      { id: 'S-03', name: 'Wollongong Rooftop Pool', type: 'SUPPLIER', suburb: 'Wollongong', lat: -34.4278, lng: 150.8931, capacityKw: 1875, status: 'ONLINE' },
-      { id: 'S-04', name: 'Shellharbour Battery Hub', type: 'SUPPLIER', suburb: 'Shellharbour', lat: -34.5806, lng: 150.8697, capacityKw: 3100, status: 'STANDBY' },
-      { id: 'S-05', name: 'Kiama Community Energy', type: 'SUPPLIER', suburb: 'Kiama', lat: -34.6708, lng: 150.8542, capacityKw: 980, status: 'ONLINE' },
-      { id: 'S-06', name: 'Bulli Hydro Micro-Plant', type: 'SUPPLIER', suburb: 'Bulli', lat: -34.3383, lng: 150.9161, capacityKw: 640, status: 'OFFLINE' },
-
-      // --- Households ---
-      { id: 'H-101', name: 'Fairy Meadow Cluster', type: 'HOUSEHOLD', suburb: 'Fairy Meadow', lat: -34.3944, lng: 150.8983, capacityKw: 42, status: 'ONLINE' },
-      { id: 'H-102', name: 'Figtree Estate', type: 'HOUSEHOLD', suburb: 'Figtree', lat: -34.4383, lng: 150.8536, capacityKw: 65, status: 'ONLINE' },
-      { id: 'H-103', name: 'Corrimal Terraces', type: 'HOUSEHOLD', suburb: 'Corrimal', lat: -34.3778, lng: 150.9044, capacityKw: 38, status: 'ONLINE' },
-      { id: 'H-104', name: 'Albion Park Rail Homes', type: 'HOUSEHOLD', suburb: 'Albion Park Rail', lat: -34.5697, lng: 150.7906, capacityKw: 54, status: 'STANDBY' },
-      { id: 'H-105', name: 'Thirroul Beachside', type: 'HOUSEHOLD', suburb: 'Thirroul', lat: -34.3153, lng: 150.9236, capacityKw: 29, status: 'ONLINE' },
-      { id: 'H-106', name: 'Warrawong Village', type: 'HOUSEHOLD', suburb: 'Warrawong', lat: -34.4881, lng: 150.8869, capacityKw: 47, status: 'ONLINE' },
-      { id: 'H-107', name: 'Helensburgh North', type: 'HOUSEHOLD', suburb: 'Helensburgh', lat: -34.1786, lng: 150.9964, capacityKw: 22, status: 'OFFLINE' },
-      { id: 'H-108', name: 'Berkeley Green', type: 'HOUSEHOLD', suburb: 'Berkeley', lat: -34.4667, lng: 150.8492, capacityKw: 51, status: 'ONLINE' },
-    ];
-  }
+  /** Sites from the server. Empty until the first response lands. */
+  readonly sites = toSignal(
+    this.api.sites$.pipe(catchError(() => of<GridSite[]>([]))),
+    { initialValue: [] as GridSite[] },
+  );
 
   /** Buying / selling price in cents per kWh across the trading day. */
   getPriceCurve(): PricePoint[] {
@@ -79,6 +40,6 @@ export class GridData {
   }
 
   getSellPrice(): number {
-    return 14.80;
+    return 14.8;
   }
 }

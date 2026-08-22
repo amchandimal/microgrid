@@ -25,25 +25,50 @@ export interface GeoResult {
   boundingBox?: [number, number, number, number];
 }
 
-/** One hexagon of the demand/supply overlay. */
-export interface HexCell {
-  /** Stable across pans at a given resolution: "<sizeMetres>:<q>:<r>". */
+/** One hexagon of the overlay, as GridController sends it. */
+export interface GridCell {
+  /** Stable for a given resolution: "<sizeMetres>:<q>:<r>". */
   id: string;
-  /** Axial coordinates in the hex lattice. */
   q: number;
   r: number;
   /** Flat-to-flat width on the ground, in metres. */
   sizeMetres: number;
   areaHectares: number;
-  center: [number, number];
-  /** The six corners, ready for L.polygon. */
-  ring: [number, number][];
+  lat: number;
+  lng: number;
   demandKw: number;
   supplyKw: number;
   /** supplyKw - demandKw. Positive means the cell exports. */
   netKw: number;
-  /** -1 = pure demand (red) .. 0 = balanced .. +1 = pure supply (green). */
+  /** -1 all demand, 0 balanced, +1 all supply. Drives the colour. */
   balance: number;
-  /** Sites whose footprint falls inside this cell. */
+  /** How built-up the cell is, 0..1 - the field the rest follows. */
+  builtUp: number;
   siteIds: string[];
+}
+
+/** One page of the overlay. */
+export interface GridCells {
+  zoom: number;
+  sizeMetres: number;
+  /** Latitude the server sized the lattice at; needed to redraw the hexagon. */
+  referenceLat: number;
+  count: number;
+  /** True when the server's cell cap cut the response short. */
+  truncated: boolean;
+  cells: GridCell[];
+}
+
+/** Extent and resolution limits, straight from the server. */
+export interface GridRegion {
+  /** [[south, west], [north, east]] - ready for Leaflet. */
+  bounds: [[number, number], [number, number]];
+  north: number;
+  south: number;
+  west: number;
+  east: number;
+  finestMetres: number;
+  finestZoom: number;
+  maxCells: number;
+  referenceLat: number;
 }

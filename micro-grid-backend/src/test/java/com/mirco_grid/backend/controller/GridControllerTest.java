@@ -1,0 +1,113 @@
+package com.mirco_grid.backend.controller;
+
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.mirco_grid.backend.service.BuiltUpDensity;
+import com.mirco_grid.backend.service.GridService;
+import com.mirco_grid.backend.service.IllawarraRegion;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.web.servlet.MockMvc;
+
+@WebMvcTest(GridController.class)
+@Import({GridService.class, BuiltUpDensity.class})
+class GridControllerTest {
+
+    @Autowired
+    private MockMvc mvc;
+
+    @Test
+    void servesTheRegionTheMapShouldCover() throws Exception {
+        mvc.perform(get("/api/grid/region"))
+                .andExpect(status().isOk())
+                // Top of Helensburgh down to the bottom of Kiama.
+                .andExpect(jsonPath("$.north").value(-34.145887))
+                .andExpect(jsonPath("$.south").value(-34.6947658))
+                .andExpect(jsonPath("$.west").value(150.65))
+                .andExpect(jsonPath("$.east").value(151.14))
+                // Leaflet wants [[south, west], [north, east]]
+                .andExpect(jsonPath("$.bounds[0][0]").value(-34.6947658))
+                .andExpect(jsonPath("$.bounds[0][1]").value(150.65))
+                .andExpect(jsonPath("$.bounds[1][0]").value(-34.145887))
+                .andExpect(jsonPath("$.bounds[1][1]").value(151.14))
+                .andExpect(jsonPath("$.finestMetres").value(50))
+                .andExpect(jsonPath("$.referenceLat").value(GridService.REFERENCE_LAT));
+    }
+
+    @Test
+    void servesEverySite() throws Exception {
+        mvc.perform(get("/api/grid/sites"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(14)))
+                .andExpect(jsonPath("$[0].id").value("S-01"))
+                .andExpect(jsonPath("$[0].type").value("SUPPLIER"))
+                .andExpect(jsonPath("$[*].lat", everyItem(greaterThan(IllawarraRegion.SOUTH))));
+    }
+
+    @Test
+    void servesCellsForAViewport() throws Exception {
+        mvc.perform(get("/api/grid/cells")
+                        .param("south", "-34.6947658").param("west", "150.65")
+                        .param("north", "-34.145887").param("east", "151.14")
+                        .param("zoom", "11"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sizeMetres").value(1600))
+                .andExpect(jsonPath("$.truncated").value(false))
+                .andExpect(jsonPath("$.count", greaterThan(100)))
+                .andExpect(jsonPath("$.cells[0].id").exists())
+                .andExpect(jsonPath("$.cells[*].balance", everyItem(lessThanOrEqualTo(1.0))));
+    }
+
+    @Test
+    void clipsAViewportLargerThanTheRegion() throws Exception {
+        mvc.perform(get("/api/grid/cells")
+                        .param("south", "-40").param("west", "145")
+                        .param("north", "-30").param("east", "155")
+                        .param("zoom", "11"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count", greaterThan(100)));
+    }
+
+    @Test
+    void returnsNothingForAViewportOffTheRegion() throws Exception {
+        mvc.perform(get("/api/grid/cells")
+                        .param("south", "-33.9").param("west", "151.1")
+                        .param("north", "-33.8").param("east", "151.3")
+                        .param("zoom", "12"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(0))
+                .andExpect(jsonPath("$.cells", hasSize(0)));
+    }
+
+    @Test
+    void rejectsAnInsideOutViewport() throws Exception {
+        mvc.perform(get("/api/grid/cells")
+                        .param("south", "-34.2").param("west", "150.65")
+                        .param("north", "-34.6").param("east", "151.14")
+                        .param("zoom", "11"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsAnImpossibleZoom() throws Exception {
+        mvc.perform(get("/api/grid/cells")
+                        .param("south", "-34.6").param("west", "150.65")
+                        .param("north", "-34.2").param("east", "151.14")
+                        .param("zoom", "40"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsAMissingParameter() throws Exception {
+        mvc.perform(get("/api/grid/cells").param("south", "-34.6"))
+                .andExpect(status().isBadRequest());
+    }
+}

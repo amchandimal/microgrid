@@ -55,7 +55,7 @@
           <div>
             <strong>Grid cell</strong>
             <span class="cell-card__sub">
-              {{ cell.center[0].toFixed(4) }}, {{ cell.center[1].toFixed(4) }}
+              {{ cell.lat.toFixed(4) }}, {{ cell.lng.toFixed(4) }}
             </span>
             <span class="cell-card__sub">
               {{ cell.sizeMetres >= 1000 ? (cell.sizeMetres / 1000) + ' km' : cell.sizeMetres + ' m' }}
@@ -88,7 +88,7 @@
           </div>
           <span class="cell-card__verdict">
             {{ cell.netKw > 0 ? 'Net supplier' : cell.netKw < 0 ? 'Net consumer' : 'Balanced' }}
-            &middot; balance {{ cell.balance }}
+            &middot; {{ (cell.builtUp * 100).toFixed(0) }}% built-up
           </span>
         </div>
 
@@ -109,12 +109,17 @@
         <i class="legend-scale__bar" [style.background]="legendGradient"></i>
         More supply
       </span>
+      @if (loadError()) {
+        <span class="legend-warn">{{ loadError() }}</span>
+      } @else if (loading()) {
+        <span class="legend-count">loading…</span>
+      }
       <span class="legend-count">
         {{ cellCount() }} cells &middot;
         {{ cellMetres() >= 1000 ? (cellMetres() / 1000) + ' km' : cellMetres() + ' m' }} across
       </span>
     } @else {
-      <span class="legend-count">{{ sites.length }} sites</span>
+      <span class="legend-count">{{ sites().length }} sites</span>
     }
   </div>
 </div>

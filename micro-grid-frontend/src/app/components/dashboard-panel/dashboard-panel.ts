@@ -11,7 +11,7 @@ import { GridSite } from '../../models/grid.models';
 export class DashboardPanel {
   private readonly gridData = inject(GridData);
 
-  protected readonly sites = signal<GridSite[]>(this.gridData.getSites());
+  protected readonly sites = this.gridData.sites;
   protected readonly priceCurve = this.gridData.getPriceCurve();
 
   protected readonly suppliers = computed(() =>

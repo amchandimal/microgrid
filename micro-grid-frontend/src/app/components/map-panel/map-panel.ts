@@ -1,6 +1,7 @@
 import {
   AfterViewInit,
   Component,
+  DestroyRef,
   ElementRef,
   NgZone,
   OnDestroy,
@@ -12,9 +13,10 @@ import * as L from 'leaflet';
 import { Subject, debounceTime, distinctUntilChanged, switchMap, catchError, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Geocoding } from '../../services/geocoding';
+import { GridApi } from '../../services/grid-api';
 import { GridData } from '../../services/grid-data';
 import { HexGrid } from '../../services/hex-grid';
-import { GeoResult, GridSite, HexCell } from '../../models/grid.models';
+import { GeoResult, GridCell, GridCells, GridRegion, GridSite } from '../../models/grid.models';
 
 /** Extra ring the hex canvas paints beyond the viewport, as a fraction. */
 const HEX_CANVAS_PADDING = 0.1;
@@ -29,10 +31,16 @@ export class MapPanel implements AfterViewInit, OnDestroy {
   @ViewChild('mapHost', { static: true }) mapHost!: ElementRef<HTMLDivElement>;
 
   private readonly geocoding = inject(Geocoding);
+  private readonly gridApi = inject(GridApi);
   private readonly gridData = inject(GridData);
   private readonly hexGrid = inject(HexGrid);
   private readonly zone = inject(NgZone);
+  // Held because takeUntilDestroyed() only finds one on its own inside the
+  // constructor, and two of these subscriptions start later than that.
+  private readonly destroyRef = inject(DestroyRef);
   private readonly query$ = new Subject<string>();
+  /** Fires whenever the visible box changes and new cells are wanted. */
+  private readonly viewport$ = new Subject<void>();
 
   private map?: L.Map;
   private searchMarker?: L.Marker;
@@ -42,19 +50,21 @@ export class MapPanel implements AfterViewInit, OnDestroy {
   private selectedOutline?: L.Polygon;
   private hostResize?: ResizeObserver;
   private fitted = false;
-  private rebuildHandle?: ReturnType<typeof setTimeout>;
   private settleHandle?: ReturnType<typeof setTimeout>;
+  private region?: GridRegion;
 
   protected readonly query = signal('');
   protected readonly results = signal<GeoResult[]>([]);
   protected readonly searching = signal(false);
   protected readonly showResults = signal(false);
-  protected readonly sites = this.gridData.getSites();
+  protected readonly sites = this.gridData.sites;
 
   protected readonly showHexGrid = signal(true);
-  protected readonly selectedCell = signal<HexCell | null>(null);
-  protected readonly cellMetres = signal(this.hexGrid.cellMetresForZoom(this.gridData.illawarraZoom));
+  protected readonly selectedCell = signal<GridCell | null>(null);
+  protected readonly cellMetres = signal(0);
   protected readonly cellCount = signal(0);
+  protected readonly loading = signal(false);
+  protected readonly loadError = signal<string | null>(null);
   protected readonly legendGradient = this.hexGrid.legendGradient();
 
   constructor() {
@@ -77,31 +87,84 @@ export class MapPanel implements AfterViewInit, OnDestroy {
         this.results.set(res);
         this.showResults.set(res.length > 0);
       });
+
+    // Pan and zoom both land here, several times per gesture, so coalesce and
+    // let switchMap drop any request the user has already panned away from.
+    this.viewport$
+      .pipe(
+        debounceTime(140),
+        switchMap(() => {
+          const request = this.currentViewport();
+          if (!request) return of<GridCells | null>(null);
+          this.loading.set(true);
+          return this.gridApi.cells(request.bounds, request.zoom).pipe(
+            catchError(() => {
+              this.loadError.set('Could not load the grid overlay');
+              return of<GridCells | null>(null);
+            }),
+          );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe((cells) => {
+        this.loading.set(false);
+        if (cells) this.renderCells(cells);
+      });
+
+    this.gridData.sites; // touch the signal so the sites request starts early
   }
 
   ngAfterViewInit(): void {
+    // The region defines maxBounds and the zoom floor, so the map cannot be
+    // built until the server has answered.
+    this.gridApi.region$
+      .pipe(
+        catchError(() => {
+          this.loadError.set('Cannot reach the grid service on /api/grid');
+          return of<GridRegion | null>(null);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((region) => {
+        if (region) this.initMap(region);
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.hostResize?.disconnect();
+    if (this.settleHandle) clearTimeout(this.settleHandle);
+    this.map?.remove();
+    // The map?. guards elsewhere only mean anything if this is cleared.
+    this.map = undefined;
+  }
+
+  private initMap(region: GridRegion): void {
+    this.region = region;
+    this.loadError.set(null);
+
     this.map = L.map(this.mapHost.nativeElement, {
-      center: this.gridData.illawarraCenter,
-      zoom: this.gridData.illawarraZoom,
+      center: [(region.north + region.south) / 2, (region.west + region.east) / 2],
+      zoom: 11,
       zoomControl: true,
-      // The Illawarra box is the hard outer limit of the camera: maxBounds
-      // stops the pan, applyZoomOutLimit() stops the zoom.
-      maxBounds: this.gridData.illawarraBounds,
+      // The region is the hard outer limit of the camera: maxBounds stops the
+      // pan, applyZoomOutLimit() stops the zoom.
+      maxBounds: region.bounds,
       maxBoundsViscosity: 1,
       // Required, not a preference. Leaflet runs _limitZoom twice on the way
       // through setView, and with snapping on the second pass rounds the
       // fractional floor UP to the next whole level - which crops the very
-      // corners this limit exists to keep on screen. Turning snapping off is
-      // the only way to rest exactly on the fit. The cost is that zoom levels
-      // are no longer whole numbers, so tiles are drawn rescaled from the
-      // nearest level; swap this for a whole-number floor if that matters
-      // more than hitting the corners exactly.
+      // edges this limit exists to keep on screen. Turning snapping off is the
+      // only way to rest exactly on the fit. The cost is that zoom levels are
+      // no longer whole numbers, so tiles are drawn rescaled from the nearest
+      // level; swap this for a whole-number floor if that matters more than
+      // hitting the edges exactly.
       zoomSnap: 0,
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(this.map);
 
     this.fitRegion();
@@ -110,11 +173,11 @@ export class MapPanel implements AfterViewInit, OnDestroy {
     // under the markers so site pins stay clickable through the overlay.
     this.hexRenderer = L.canvas({ padding: HEX_CANVAS_PADDING });
     this.hexLayer = L.layerGroup().addTo(this.map);
-    this.map.on('moveend zoomend', () => this.scheduleHexRebuild());
-    this.rebuildHexes();
+    this.map.on('moveend zoomend', () => this.viewport$.next());
+    this.viewport$.next();
 
     this.siteLayer = L.layerGroup().addTo(this.map);
-    this.sites.forEach((site) => this.addSiteMarker(site));
+    this.drawSites();
 
     // The flex layout only settles after this hook, and the zoom floor is a
     // function of the container size, so track the host instead of guessing
@@ -122,19 +185,26 @@ export class MapPanel implements AfterViewInit, OnDestroy {
     this.observeHostSize();
   }
 
-  ngOnDestroy(): void {
-    this.hostResize?.disconnect();
-    if (this.rebuildHandle) clearTimeout(this.rebuildHandle);
-    if (this.settleHandle) clearTimeout(this.settleHandle);
-    this.map?.remove();
-    // The map?. guards elsewhere only mean anything if this is cleared.
-    this.map = undefined;
+  private drawSites(): void {
+    if (!this.siteLayer) return;
+    // Sites may land before or after the map; redraw whenever we are called.
+    this.siteLayer.clearLayers();
+    this.sites().forEach((site) => this.addSiteMarker(site));
+    if (this.sites().length === 0) {
+      // Not loaded yet - come back once the signal fills in.
+      this.gridApi.sites$
+        .pipe(
+          catchError(() => of<GridSite[]>([])),
+          takeUntilDestroyed(this.destroyRef),
+        )
+        .subscribe((sites) => sites.forEach((site) => this.addSiteMarker(site)));
+    }
   }
 
   protected toggleHexGrid(): void {
     this.showHexGrid.update((on) => !on);
     if (this.showHexGrid()) {
-      this.rebuildHexes();
+      this.viewport$.next();
     } else {
       this.hexLayer?.clearLayers();
       this.clearSelection();
@@ -219,15 +289,15 @@ export class MapPanel implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Settle the camera against the Illawarra box. A host with no width yet -- a
-   * hidden panel, or a flex layout that has not resolved -- would make
-   * fitBounds() pick a whole-world view, so nothing happens until the
-   * container is real and the observer calls back. The box is only fitted
-   * once; later resizes just move the floor, rather than yanking the user
-   * back to the region every time the window changes.
+   * Settle the camera against the region. A host with no width yet - a hidden
+   * panel, or a flex layout that has not resolved - would make fitBounds()
+   * pick a whole-world view, so nothing happens until the container is real
+   * and the observer calls back. The region is only fitted once; later resizes
+   * just move the floor, rather than yanking the user back every time the
+   * window changes.
    */
   private fitRegion(): void {
-    if (!this.map) return;
+    if (!this.map || !this.region) return;
 
     const size = this.map.getSize();
     if (!size.x || !size.y) return;
@@ -239,18 +309,18 @@ export class MapPanel implements AfterViewInit, OnDestroy {
     }
   }
 
-/** Park the camera on the whole Illawarra box, at exactly the zoom floor. */
+  /** Park the camera on the whole region, at exactly the zoom floor. */
   private showWholeRegion(): void {
-    this.map?.fitBounds(this.gridData.illawarraBounds);
+    if (this.region) this.map?.fitBounds(this.region.bounds);
   }
 
   /**
-   * Hold the minimum zoom at the level where the Illawarra box exactly fills
-   * the viewport, so the map can never be pulled back past those corners.
-   * Depends on the container size, so it is recomputed on every host resize.
+   * Hold the minimum zoom at the level where the region exactly fills the
+   * viewport, so the map can never be pulled back past its edges. Depends on
+   * the container size, so it is recomputed on every host resize.
    */
   private applyZoomOutLimit(): void {
-    if (!this.map) return;
+    if (!this.map || !this.region) return;
 
     const size = this.map.getSize();
     if (!size.x || !size.y) return;
@@ -265,40 +335,43 @@ export class MapPanel implements AfterViewInit, OnDestroy {
     // floor has to come off before measuring or it ratchets up on each resize.
     const previous = this.map.getMinZoom();
     this.map.setMinZoom(0);
-    const fit = this.map.getBoundsZoom(L.latLngBounds(this.gridData.illawarraBounds));
+    const fit = this.map.getBoundsZoom(L.latLngBounds(this.region.bounds));
     // Restore rather than leaving the map with no floor at all if it failed.
     this.map.setMinZoom(Number.isFinite(fit) ? fit : previous);
   }
 
-  /**
-   * Pan and zoom both land here, often several times per gesture, so coalesce
-   * into one rebuild on the next tick.
-   */
-  private scheduleHexRebuild(): void {
-    if (this.rebuildHandle) clearTimeout(this.rebuildHandle);
-    this.rebuildHandle = setTimeout(() => this.rebuildHexes(), 90);
-  }
-
-  private rebuildHexes(): void {
-    if (!this.map || !this.hexLayer || !this.showHexGrid()) return;
-
-    const zoom = this.map.getZoom();
-    const metres = this.hexGrid.cellMetresForZoom(zoom);
-    // A selected cell only exists at the resolution it was picked at, so a
-    // zoom that changes cell size invalidates it.
-    if (metres !== this.cellMetres()) this.clearSelection();
+  /** The box to ask the server for, padded to cover the whole hex canvas. */
+  private currentViewport() {
+    if (!this.map || !this.showHexGrid()) return null;
+    const size = this.map.getSize();
+    if (!size.x || !size.y) return null;
 
     // Cover the whole canvas, not just the viewport, so a pan does not expose
-    // an unpainted margin before the next rebuild lands.
-    const cells = this.hexGrid.cellsForView(
-      this.map.getBounds().pad(HEX_CANVAS_PADDING + 0.02),
-      zoom,
-    );
+    // an unpainted margin before the next response lands.
+    const b = this.map.getBounds().pad(HEX_CANVAS_PADDING + 0.02);
+    return {
+      bounds: {
+        south: b.getSouth(),
+        west: b.getWest(),
+        north: b.getNorth(),
+        east: b.getEast(),
+      },
+      zoom: this.map.getZoom(),
+    };
+  }
+
+  private renderCells(page: GridCells): void {
+    if (!this.map || !this.hexLayer || !this.showHexGrid()) return;
+
+    // A selected cell only exists at the resolution it was picked at, so a
+    // zoom that changes cell size invalidates it.
+    if (page.sizeMetres !== this.cellMetres()) this.clearSelection();
 
     this.hexLayer.clearLayers();
-    for (const cell of cells) {
+    for (const cell of page.cells) {
+      const ring = this.hexGrid.ringFor(cell, page.referenceLat);
       const { color, opacity } = this.hexGrid.styleFor(cell.balance);
-      L.polygon(cell.ring, {
+      L.polygon(ring, {
         renderer: this.hexRenderer,
         stroke: false,
         fill: true,
@@ -308,22 +381,18 @@ export class MapPanel implements AfterViewInit, OnDestroy {
         interactive: true,
         bubblingMouseEvents: false,
       })
-        .on('click', () => this.selectCell(cell))
+        .on('click', () => this.selectCell(cell, ring))
         .addTo(this.hexLayer);
     }
 
-    // Signals are read by the template, and pan/zoom can arrive from a
-    // listener registered outside Angular, so update inside the zone.
-    this.zone.run(() => {
-      this.cellMetres.set(metres);
-      this.cellCount.set(cells.length);
-    });
+    this.cellMetres.set(page.sizeMetres);
+    this.cellCount.set(page.count);
   }
 
-  private selectCell(cell: HexCell): void {
+  private selectCell(cell: GridCell, ring: [number, number][]): void {
     this.selectedOutline?.remove();
     if (this.map) {
-      this.selectedOutline = L.polygon(cell.ring, {
+      this.selectedOutline = L.polygon(ring, {
         renderer: this.hexRenderer,
         // Canvas takes a real colour - it cannot resolve a CSS variable.
         color: this.cssColour('--mg-text', '#16202c'),
@@ -344,9 +413,10 @@ export class MapPanel implements AfterViewInit, OnDestroy {
   }
 
   /** Site names for the selected cell, for the readout card. */
-  protected cellSiteNames(cell: HexCell): string[] {
+  protected cellSiteNames(cell: GridCell): string[] {
+    const sites = this.sites();
     return cell.siteIds
-      .map((id) => this.sites.find((s) => s.id === id))
+      .map((id) => sites.find((s) => s.id === id))
       .filter((s): s is GridSite => !!s)
       .map((s) => s.name);
   }
