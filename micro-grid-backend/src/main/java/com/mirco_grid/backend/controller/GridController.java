@@ -62,7 +62,12 @@ public class GridController {
              * instead of leaving the difference looking like a loading failure.
              */
             double[][] surveyedBounds,
-            String coverageNote) {}
+            String coverageNote,
+            /** Where the map opens, as against where it is allowed to go. */
+            Focus focus) {}
+
+    /** The opening camera position. */
+    public record Focus(double lat, double lng, String label) {}
 
     @GetMapping("/region")
     public RegionResponse region() {
@@ -78,7 +83,11 @@ public class GridController {
                 GridService.REFERENCE_LAT,
                 IllawarraRegion.surveyedBounds(),
                 "The supply and demand overlay is modelled from Helensburgh to Kiama."
-                        + " The rest of the region is mapped but not yet surveyed.");
+                        + " The rest of the region is mapped but not yet surveyed.",
+                new Focus(
+                        IllawarraRegion.FOCUS_LAT,
+                        IllawarraRegion.FOCUS_LNG,
+                        IllawarraRegion.FOCUS_LABEL));
     }
 
     @GetMapping("/sites")

@@ -76,6 +76,9 @@ export class MapPanel implements AfterViewInit, OnDestroy {
    */
   protected readonly coverageNote = signal<string | null>(null);
 
+  /** What the reset button is named after - where it takes you back to. */
+  protected readonly focusLabel = signal('Illawarra, NSW');
+
   constructor() {
     this.query$
       .pipe(
@@ -150,10 +153,13 @@ export class MapPanel implements AfterViewInit, OnDestroy {
   private initMap(region: GridRegion): void {
     this.region = region;
     this.coverageNote.set(region.coverageNote ?? null);
+    if (region.focus?.label) this.focusLabel.set(region.focus.label);
     this.loadError.set(null);
 
     this.map = L.map(this.mapHost.nativeElement, {
-      center: [(region.north + region.south) / 2, (region.west + region.east) / 2],
+      // Replaced by showOpeningView() the moment the panel has a size; this
+      // is only what Leaflet needs to construct itself.
+      center: [region.focus.lat, region.focus.lng],
       zoom: 11,
       zoomControl: true,
       // The region is the hard outer limit of the camera: maxBounds stops the
@@ -277,7 +283,7 @@ export class MapPanel implements AfterViewInit, OnDestroy {
     this.searchMarker?.remove();
     this.searchMarker = undefined;
     this.clearSelection();
-    this.showWholeRegion();
+    this.showOpeningView();
   }
 
   private observeHostSize(): void {
@@ -315,13 +321,35 @@ export class MapPanel implements AfterViewInit, OnDestroy {
     this.applyZoomOutLimit();
     if (!this.fitted) {
       this.fitted = true;
-      this.showWholeRegion();
+      this.showOpeningView();
     }
   }
 
-  /** Park the camera on the whole region, at exactly the zoom floor. */
-  private showWholeRegion(): void {
-    if (this.region) this.map?.fitBounds(this.region.bounds);
+  /**
+   * The opening shot: Wollongong, framed by the ground that has data.
+   *
+   * <p>Fitting the whole region instead would park the camera out over
+   * Gerringong with the top of the frame in southern Sydney - the region runs
+   * a hundred and fifteen kilometres from Waterfall to Jervis Bay and the city
+   * is only a slice of it. So the zoom is taken from the surveyed strip, which
+   * is what the overlay actually covers, and the centre is put on the city.
+   *
+   * <p>This is the first frame only. The region is still the limit: the zoom
+   * floor set by {@link applyZoomOutLimit} lets the whole of it be pulled into
+   * view and no further, and maxBounds stops the pan at its edges.
+   */
+  private showOpeningView(): void {
+    const region = this.region;
+    if (!this.map || !region) return;
+
+    // getBoundsZoom answers for the current window, so the frame tracks the
+    // panel size rather than a zoom guessed at design time.
+    const frame = region.surveyedBounds ?? region.bounds;
+    const zoom = this.map.getBoundsZoom(L.latLngBounds(frame));
+    this.map.setView(
+      [region.focus.lat, region.focus.lng],
+      Number.isFinite(zoom) ? zoom : this.map.getZoom(),
+    );
   }
 
   /**
