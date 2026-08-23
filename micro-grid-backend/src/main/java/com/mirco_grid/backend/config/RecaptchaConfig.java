@@ -2,7 +2,6 @@ package com.mirco_grid.backend.config;
 
 import com.mirco_grid.backend.service.recaptcha.CreateAssessment;
 import com.mirco_grid.backend.service.recaptcha.RecaptchaProperties;
-import java.io.IOException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -34,19 +33,24 @@ public class RecaptchaConfig {
             @Value("${micro-grid.recaptcha.enabled:false}") boolean enabled,
             @Value("${micro-grid.recaptcha.project-id:}") String projectId,
             @Value("${micro-grid.recaptcha.site-key:}") String siteKey,
+            @Value("${micro-grid.recaptcha.api-key:}") String apiKey,
             @Value("${micro-grid.recaptcha.min-score:0.5}") double minScore,
             @Value("${micro-grid.recaptcha.exempt-paths:}") String[] exemptPaths) {
-        return new RecaptchaProperties(enabled, projectId, siteKey, minScore, exemptPaths);
+        return new RecaptchaProperties(
+                enabled, projectId, siteKey, apiKey, minScore, exemptPaths);
     }
 
     /**
-     * The Google client is opened here, at startup, so missing or unauthorised
-     * credentials fail the boot loudly rather than becoming a site that
-     * refuses every request.
+     * Checks its configuration at startup, so a missing API key fails the boot
+     * loudly rather than becoming a site that refuses every request. The URL is
+     * a property only so the tests can point it at a local stub.
      */
-    @Bean(destroyMethod = "close")
-    CreateAssessment createAssessment(RecaptchaProperties properties) throws IOException {
-        return new CreateAssessment(properties);
+    @Bean
+    CreateAssessment createAssessment(
+            RecaptchaProperties properties,
+            @Value("${micro-grid.recaptcha.url:" + CreateAssessment.ASSESSMENTS_URL + "}")
+            String baseUrl) {
+        return new CreateAssessment(properties, baseUrl);
     }
 
     @Bean

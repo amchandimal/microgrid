@@ -23,6 +23,7 @@ public class RecaptchaProperties {
     private final boolean enabled;
     private final String projectId;
     private final String siteKey;
+    private final String apiKey;
     private final double minScore;
     private final List<String> exemptPaths;
 
@@ -30,11 +31,13 @@ public class RecaptchaProperties {
             boolean enabled,
             String projectId,
             String siteKey,
+            String apiKey,
             double minScore,
             String[] exemptPaths) {
         this.enabled = enabled;
         this.projectId = projectId.trim();
         this.siteKey = siteKey.trim();
+        this.apiKey = apiKey.trim();
         this.minScore = minScore;
         this.exemptPaths = Arrays.stream(exemptPaths)
                 .map(String::trim)
@@ -52,6 +55,14 @@ public class RecaptchaProperties {
 
     public String siteKey() {
         return siteKey;
+    }
+
+    /**
+     * The Google Cloud API key the assessment call authenticates with. Never
+     * logged and never sent anywhere but Google - see CreateAssessment.
+     */
+    public String apiKey() {
+        return apiKey;
     }
 
     public double minScore() {
