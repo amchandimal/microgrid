@@ -1,5 +1,6 @@
 package com.mirco_grid.backend.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
@@ -50,6 +51,35 @@ class GridControllerTest {
                 .andExpect(jsonPath("$.bounds[1][1]").value(151.14))
                 .andExpect(jsonPath("$.finestMetres").value(50))
                 .andExpect(jsonPath("$.referenceLat").value(GridService.REFERENCE_LAT));
+    }
+
+    /**
+     * The camera reaches further than the model does, and opens somewhere else
+     * again. All three are the client's business, so all three are sent.
+     */
+    @Test
+    void tellsTheMapWhereToOpenAndWhereTheDataStops() throws Exception {
+        mvc.perform(get("/api/grid/region"))
+                .andExpect(status().isOk())
+                // Wollongong, not the middle of a 115 km strip of coast.
+                .andExpect(jsonPath("$.focus.lat").value(-34.4278))
+                .andExpect(jsonPath("$.focus.lng").value(150.8931))
+                .andExpect(jsonPath("$.focus.label").value("Wollongong"))
+                // The overlay covers Helensburgh to Kiama, inside the region.
+                .andExpect(jsonPath("$.surveyedBounds[0][0]").value(-34.6947658))
+                .andExpect(jsonPath("$.surveyedBounds[1][0]").value(-34.145887))
+                .andExpect(jsonPath("$.coverageNote").isNotEmpty());
+    }
+
+    /** The opening point has to be somewhere the camera is allowed to go. */
+    @Test
+    void opensInsideItsOwnBounds() {
+        assertThat(IllawarraRegion.contains(
+                        IllawarraRegion.FOCUS_LAT, IllawarraRegion.FOCUS_LNG))
+                .isTrue();
+        assertThat(IllawarraRegion.isSurveyed(
+                        IllawarraRegion.FOCUS_LAT, IllawarraRegion.FOCUS_LNG))
+                .isTrue();
     }
 
     @Test

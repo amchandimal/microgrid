@@ -48,6 +48,20 @@ public final class IllawarraRegion {
     /** Southern boundary of Kiama - the end of the surveyed strip. */
     public static final double SURVEYED_SOUTH = -34.6947658;
 
+    /**
+     * Where the map opens: the centre of Wollongong.
+     *
+     * <p>The region is a hundred and fifteen kilometres of coast, so fitting
+     * all of it puts the camera out over Gerringong with its top edge in the
+     * southern edge of Sydney - a long way from anything this app is about.
+     * The city is what the map is for, so that is what it opens on. The region
+     * is still the limit of where it can be taken: this only decides the first
+     * frame.
+     */
+    public static final double FOCUS_LAT = -34.4278;
+    public static final double FOCUS_LNG = 150.8931;
+    public static final String FOCUS_LABEL = "Wollongong";
+
     private IllawarraRegion() {}
 
     public static boolean contains(double lat, double lng) {

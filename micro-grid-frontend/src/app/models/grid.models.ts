@@ -75,6 +75,8 @@ export interface GridRegion {
   surveyedBounds: [[number, number], [number, number]];
   /** Why the two differ, in words the legend can show. */
   coverageNote: string;
+  /** Where the map opens, as against where it is allowed to go. */
+  focus: { lat: number; lng: number; label: string };
 }
 
 // --- Energy Outcome Wizard ----------------------------------------------------

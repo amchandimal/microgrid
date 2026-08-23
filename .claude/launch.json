@@ -20,7 +20,7 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": [
         "/c",
-        "cd micro-grid-backend && call .\\mvnw.cmd -q spring-boot:run"
+        "cd micro-grid-backend && call .\\mvnw.cmd -q -Dspring-boot.run.profiles=dev spring-boot:run"
       ],
       "port": 8080
     }
