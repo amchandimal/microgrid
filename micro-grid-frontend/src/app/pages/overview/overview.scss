@@ -32,14 +32,60 @@
   }
 }
 
+/*
+ * Narrow screens stack the two columns, and stacking is what needs the scroll
+ * to move.
+ *
+ * The app shell is a fixed 100dvh box and `.shell__body` clips its overflow on
+ * purpose, so the topbar can never be scrolled away. Side by side that is
+ * fine - each column is its own scroller. Stacked, the page is suddenly taller
+ * than the box, and the old rule here let the host grow (`height: auto`) into
+ * a parent that clips and does not scroll: everything past the first screen
+ * was cut off with no way to reach it, which on a phone meant almost all of
+ * the Grid Dashboard sitting under the fold.
+ *
+ * So the page becomes its own scroller instead - the same shape the shell
+ * already expects of every route, and the same one the Grid Smart wizard
+ * uses. The columns hand their scrolling up to it rather than nesting a
+ * second scroll container inside a touch drag.
+ */
 @media (max-width: 900px) {
-  :host { height: auto; overflow: visible; }
+  :host {
+    height: 100%;
+    overflow-y: auto;
+    /* Rubber-banding here must not chain to a shell that cannot scroll. */
+    overscroll-behavior-y: contain;
+  }
 
   .split {
+    /* Auto so the rows can total more than one screen; min-height so a short
+       dashboard still fills the viewport rather than leaving a gap. */
+    height: auto;
+    min-height: 100%;
     grid-template-columns: 1fr;
   }
 
-  .split__left { height: 55vh; }
-  .split__right { border-left: 0; border-top: 1px solid var(--mg-border); }
-  .topbar__nav { display: none; }
+  .split__left {
+    /*
+     * dvh, not vh: on iOS `vh` measures the viewport with the browser chrome
+     * hidden, so a `vh` map is always taller than the space actually on
+     * screen. The floor is not arbitrary either - the map panel cannot
+     * compress below its toolbar, its own `min-height: 320px` map host and
+     * its legend, and anything shorter makes the legend spill over the
+     * dashboard underneath.
+     */
+    height: clamp(420px, 52dvh, 520px);
+  }
+
+  .split__right {
+    /* The page scrolls now, so the column has nothing left to clip - and
+       leaving it hidden risks a scroller inside a scroller on touch. */
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid var(--mg-border);
+    /* Carries the dashboard's own surface into the home-indicator strip, so
+       the inset reads as part of the panel rather than a seam below it. */
+    background: var(--mg-surface-2);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
