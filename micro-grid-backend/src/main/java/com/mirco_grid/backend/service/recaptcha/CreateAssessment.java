@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -11,6 +12,7 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 /**
  * Scores one client token against reCAPTCHA Enterprise.
@@ -38,6 +40,12 @@ public class CreateAssessment {
     public static final String ASSESSMENTS_URL =
             "https://recaptchaenterprise.googleapis.com/v1";
 
+    /** reCAPTCHA site keys open with this; Cloud API keys never do. */
+    private static final String SITE_KEY_PREFIX = "6L";
+
+    /** Google Cloud API keys open with this. */
+    private static final String API_KEY_PREFIX = "AIza";
+
     /** What a refused-because-we-could-not-tell answer says. */
     private static final String UNAVAILABLE = "Could not verify this request. Try again shortly.";
 
@@ -51,6 +59,9 @@ public class CreateAssessment {
     private final RecaptchaProperties properties;
     private final RestClient client;
 
+    /** So a permanent misconfiguration explains itself once, not once per request. */
+    private final AtomicBoolean explainedConfigError = new AtomicBoolean();
+
     public CreateAssessment(RecaptchaProperties properties, String baseUrl) {
         if (properties.projectId().isEmpty()
                 || properties.siteKey().isEmpty()
@@ -58,6 +69,25 @@ public class CreateAssessment {
             throw new IllegalStateException(
                     "micro-grid.recaptcha.project-id, .site-key and .api-key are all required "
                             + "when micro-grid.recaptcha.enabled is true. Set RECAPTCHA_API_KEY.");
+        }
+        // The two credentials are easy to mix up and the symptom is miserable:
+        // the browser mints tokens happily, every assessment comes back "API key
+        // not valid", and the whole API fails closed. A site key is public and
+        // starts "6L"; the assessment call needs a Cloud API key.
+        if (properties.apiKey().startsWith(SITE_KEY_PREFIX)) {
+            throw new IllegalStateException(
+                    "micro-grid.recaptcha.api-key looks like a reCAPTCHA SITE key - it starts with \""
+                            + SITE_KEY_PREFIX + "\". That is the public key the browser uses, and it "
+                            + "cannot authenticate the assessment call. RECAPTCHA_API_KEY needs a "
+                            + "Google Cloud API key from APIs & Services > Credentials (it starts "
+                            + "with \"" + API_KEY_PREFIX + "\"), restricted to the reCAPTCHA Enterprise API.");
+        }
+        if (!properties.apiKey().startsWith(API_KEY_PREFIX)) {
+            log.warn(
+                    "micro-grid.recaptcha.api-key does not start with \"{}\", which Google Cloud API "
+                            + "keys normally do. If assessments come back \"API key not valid\", check "
+                            + "RECAPTCHA_API_KEY - quotes from an --env-file are kept verbatim.",
+                    API_KEY_PREFIX);
         }
         this.properties = properties;
         this.client = RestClient.builder()
@@ -92,6 +122,37 @@ public class CreateAssessment {
                             new Event(properties.siteKey(), token, expectedAction)))
                     .retrieve()
                     .body(AssessmentResponse.class);
+        } catch (RestClientResponseException e) {
+            // Google answered, and said no. A 4xx here is a configuration fault
+            // - a bad key, a restricted key, the API not enabled - so it will
+            // not fix itself, and it is happening on every single request. Log
+            // the reason without the stack trace, which is identical every time
+            // and would otherwise bury the log under a flood.
+            if (e.getStatusCode().is4xxClientError()) {
+                log.error(
+                        "reCAPTCHA rejected the assessment call ({}), so every request is being "
+                                + "refused: {}",
+                        e.getStatusCode(),
+                        e.getResponseBodyAsString().replaceAll("\s+", " ").trim());
+                if (explainedConfigError.compareAndSet(false, true)) {
+                    log.error(
+                            "This is a credentials problem, not traffic. RECAPTCHA_API_KEY must be a "
+                                    + "Google Cloud API key (starts \"{}\") from APIs & Services > "
+                                    + "Credentials on project {}, restricted to the reCAPTCHA "
+                                    + "Enterprise API - not the site key the browser uses. To restore "
+                                    + "service while you fix it, set micro-grid.recaptcha.enabled=false "
+                                    + "and restart.",
+                            API_KEY_PREFIX,
+                            properties.projectId());
+                }
+            } else {
+                log.error(
+                        "reCAPTCHA assessment failed for action {} ({})",
+                        expectedAction,
+                        e.getStatusCode(),
+                        e);
+            }
+            return RecaptchaVerdict.refused(UNAVAILABLE);
         } catch (RestClientException e) {
             // Fail closed. If Google cannot be reached we cannot tell a person
             // from a bot, and the profile that turns this on is the one that

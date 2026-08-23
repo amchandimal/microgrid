@@ -14,8 +14,16 @@ import { Environment } from './environment.model';
 export const environment: Environment = {
   production: true,
   apiBaseUrl: 'https://sustainalens.com',
+  // OFF for now, to match the backend: the deployment has no Google Cloud API
+  // key, so an assessment of any token we minted would be refused and every
+  // call would 403. While this is false nothing loads enterprise.js and no
+  // token header is sent.
+  //
+  // Turning it back on means a rebuild - this is a compile-time constant, not
+  // an environment variable - and it has to happen in the same deployment that
+  // sets RECAPTCHA_ENABLED=true on the backend. See application-prod.properties.
   recaptcha: {
-    enabled: true,
+    enabled: false,
     siteKey: '6LfElZMtAAAAANQqPQwuxrZiGEPrA525f1tmgQtA',
   },
 };
