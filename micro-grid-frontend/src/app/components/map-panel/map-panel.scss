@@ -255,7 +255,8 @@
 .map-legend {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
   padding: 0.55rem 1rem;
   border-top: 1px solid var(--mg-border);
   font-size: 0.75rem;

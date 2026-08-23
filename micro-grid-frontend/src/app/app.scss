@@ -86,4 +86,12 @@
 .shell__body {
   flex: 1;
   min-height: 0;
+  /*
+   * The topbar is not allowed to be scrolled away. Nothing here should ever
+   * overflow - each page sizes itself to this box and scrolls internally - but
+   * a page that gets it wrong used to make the whole shell scrollable, and a
+   * click below the fold would carry the navigation off the top with it. Any
+   * scrolling now happens inside this box, which starts below the topbar.
+   */
+  overflow: hidden;
 }
