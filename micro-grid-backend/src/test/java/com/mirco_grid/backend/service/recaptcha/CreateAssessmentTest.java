@@ -1,6 +1,7 @@
 package com.mirco_grid.backend.service.recaptcha;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -20,6 +21,12 @@ import org.junit.jupiter.api.Test;
  * omitting false and zero rather than spelling them out.
  */
 class CreateAssessmentTest {
+
+    /** Shaped like a real Google Cloud API key, which all start "AIza". */
+    private static final String API_KEY = "AIzaSyExampleKeyForTestsOnly0000000000";
+
+    /** Shaped like a reCAPTCHA site key - the public one, and the classic mix-up. */
+    private static final String SITE_KEY = "6LfElZMtAAAAANQqPQwuxrZiGEPrA525f1tmgQtA";
 
     private HttpServer server;
     private String baseUrl;
@@ -58,7 +65,7 @@ class CreateAssessmentTest {
     private CreateAssessment assessments() {
         return new CreateAssessment(
                 new RecaptchaProperties(
-                        true, "sustainalens-506320", "site-key", "api-key", 0.5, new String[0]),
+                        true, "sustainalens-506320", "site-key", API_KEY, 0.5, new String[0]),
                 baseUrl);
     }
 
@@ -88,11 +95,11 @@ class CreateAssessmentTest {
 
         assessments().createAssessment("a-token", "LOGIN");
 
-        assertThat(lastApiKey.get()).isEqualTo("api-key");
+        assertThat(lastApiKey.get()).isEqualTo(API_KEY);
         assertThat(lastPath.get())
                 .isEqualTo("/projects/sustainalens-506320/assessments")
                 // A key in the query string leaks into access logs; it goes in the header.
-                .doesNotContain("api-key");
+                .doesNotContain(API_KEY);
         assertThat(lastBody.get())
                 .contains("\"siteKey\":\"site-key\"")
                 .contains("\"token\":\"a-token\"")
@@ -168,10 +175,38 @@ class CreateAssessmentTest {
         RecaptchaProperties noKey =
                 new RecaptchaProperties(true, "project", "site-key", "", 0.5, new String[0]);
 
-        assertThat(
-                        org.assertj.core.api.Assertions.catchThrowable(
-                                () -> new CreateAssessment(noKey, baseUrl)))
+        assertThat(catchThrowable(() -> new CreateAssessment(noKey, baseUrl)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("RECAPTCHA_API_KEY");
+    }
+
+    /**
+     * The mix-up that cost a production outage: the site key pasted into
+     * RECAPTCHA_API_KEY. Google answers "API key not valid" to every assessment
+     * while the browser keeps minting tokens quite happily, so nothing looks
+     * broken until the whole API is refusing. Caught at startup instead.
+     */
+    @Test
+    void refusesToStartWhenGivenTheSiteKeyAsTheApiKey() {
+        RecaptchaProperties siteKeyAsApiKey =
+                new RecaptchaProperties(true, "project", SITE_KEY, SITE_KEY, 0.5, new String[0]);
+
+        assertThat(catchThrowable(() -> new CreateAssessment(siteKeyAsApiKey, baseUrl)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("SITE key")
+                .hasMessageContaining("RECAPTCHA_API_KEY");
+    }
+
+    /** A bad key is permanent, so it must not be reported as a passing blip. */
+    @Test
+    void refusesEveryRequestWhileTheKeyIsRejected() {
+        googleAnswers(400, """
+                {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.",
+                 "status":"INVALID_ARGUMENT"}}""");
+
+        CreateAssessment assessments = assessments();
+
+        assertThat(assessments.createAssessment("token", "GRID").allowed()).isFalse();
+        assertThat(assessments.createAssessment("token", "COUNCIL").allowed()).isFalse();
     }
 }
