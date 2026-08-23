@@ -15,6 +15,29 @@ interface NominatimItem {
 export class Geocoding {
   private readonly http = inject(HttpClient);
   private readonly url = 'https://nominatim.openstreetmap.org/search';
+  private readonly reverseUrl = 'https://nominatim.openstreetmap.org/reverse';
+
+  /**
+   * A point back into a place name.
+   *
+   * <p>Only ever called from a press on "use my current location", so the
+   * volume is one request per person who chooses it. Zoom 14 is suburb level -
+   * fine enough to name where someone is, coarse enough not to read out their
+   * street number.
+   */
+  reverse(lat: number, lng: number): Observable<GeoResult> {
+    return this.http
+      .get<NominatimItem>(this.reverseUrl, {
+        params: { lat, lon: lng, format: 'json', zoom: '14', addressdetails: '0' },
+      })
+      .pipe(
+        map((item) => ({
+          displayName: item.display_name,
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+        })),
+      );
+  }
 
   search(query: string): Observable<GeoResult[]> {
     return this.http

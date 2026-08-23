@@ -1,236 +1,686 @@
-<div class="wizard">
-  <header class="wizard__head">
-    <h1>How to Be Grid Smart</h1>
-    <p class="lede">
-      Three quick questions and we'll show you the most you can save or earn.
-      <strong>No roof? No problem</strong> — most of these options don't need one.
-    </p>
-    <ol class="steps" aria-label="Progress">
-      <li [class.on]="step() === 'location'" [class.done]="!!located()">Where you live</li>
-      <li [class.on]="step() === 'role'" [class.done]="!!role()">You</li>
-      <li [class.on]="step() === 'questions'" [class.done]="!!plan()">Your place</li>
-      <li [class.on]="step() === 'plan'">Your plan</li>
-    </ol>
+<div class="wizard" [attr.data-text]="textSize()" [attr.data-contrast]="contrast()">
+  <!--
+    One polite live region for the whole page. Step moves, search results, the
+    build and the display settings all report through here, so announcements
+    queue instead of talking over each other.
+  -->
+  <p class="sr-only" role="status" aria-live="polite">{{ announcement() }}</p>
+
+  <header class="masthead">
+    <div class="masthead__intro">
+      <h1>How to Be Grid Smart</h1>
+      <p class="lede">
+        Three quick questions and we'll show you the most you can save or earn.
+        <strong>No roof? No problem</strong> — most of these options don't need one.
+      </p>
+    </div>
+
+    <div class="prefs" role="group" aria-label="Display settings">
+      <span class="prefs__cap" id="prefs-text">Text size</span>
+      <div class="prefs__group" role="group" aria-labelledby="prefs-text">
+        @for (t of textSizes; track t.value) {
+          <button
+            type="button"
+            class="prefs__btn"
+            [attr.aria-pressed]="textSize() === t.value"
+            (click)="setTextSize(t.value)"
+          >
+            <span class="prefs__a" [attr.data-size]="t.value" aria-hidden="true">A</span>
+            <span class="prefs__word">{{ t.label }}</span>
+          </button>
+        }
+      </div>
+      <button
+        type="button"
+        class="prefs__btn"
+        [attr.aria-pressed]="contrast() === 'high'"
+        (click)="toggleContrast()"
+      >
+        <span class="prefs__a" aria-hidden="true">◐</span>
+        <span class="prefs__word">Higher contrast</span>
+      </button>
+    </div>
   </header>
 
+  <nav class="progress" aria-label="Your progress through the wizard">
+    <p class="progress__count">
+      Step {{ stepIndex() + 1 }} of {{ stepCount }} · <strong>{{ stepTitle() }}</strong>
+    </p>
+    <ol class="steps" role="list">
+      @for (s of progressSteps(); track s.key) {
+        <li
+          class="steps__item"
+          [class.is-current]="s.current"
+          [class.is-done]="s.done"
+          [attr.aria-current]="s.current ? 'step' : null"
+        >
+          <span class="steps__mark" aria-hidden="true">{{ s.done ? '✓' : s.n }}</span>
+          <span class="steps__text">{{ s.label }}</span>
+          @if (s.done) { <span class="sr-only">, done</span> }
+        </li>
+      }
+    </ol>
+    <div class="progress__track" aria-hidden="true">
+      <span class="progress__fill" [style.width.%]="(stepIndex() / (stepCount - 1)) * 100"></span>
+    </div>
+  </nav>
+
   @if (error()) {
-    <p class="alert" role="alert">{{ error() }}</p>
+    <p class="alert" role="alert">
+      <span class="alert__ico" aria-hidden="true">⚠️</span>
+      <span>{{ error() }}</span>
+    </p>
   }
 
-  <!-- Step 0 -------------------------------------------------------------- -->
+  <!-- Step 1 - where you live ----------------------------------------------- -->
   @if (step() === 'location') {
-    <section class="card">
-      <h2>Where do you live?</h2>
-      <p class="hint">A suburb or postcode is plenty.</p>
-      <div class="field">
-        <input
-          type="text"
-          placeholder="e.g. Warrawong, or 2502"
-          [value]="addressQuery()"
-          (input)="onAddressInput($any($event.target).value)"
-          autocomplete="off"
-        />
-        @if (searching()) { <span class="spinner" aria-label="Searching"></span> }
-      </div>
-      @if (addressResults().length) {
-        <ul class="results">
-          @for (r of addressResults(); track r.displayName) {
-            <li><button type="button" (click)="chooseAddress(r)">{{ r.displayName }}</button></li>
-          }
-        </ul>
-      }
-    </section>
-  }
+    <section class="card" aria-labelledby="h-location">
+      <h2 class="card__h" id="h-location" #stepAnchor tabindex="-1">
+        <span class="ico ico--lg" data-tone="blue" aria-hidden="true">📍</span>
+        <span>Where do you live?</span>
+      </h2>
+      <p class="card__lead">
+        A suburb or postcode is plenty. We read the local grid from it — we never ask for a street number.
+      </p>
 
-  <!-- Step 1 -------------------------------------------------------------- -->
-  @if (step() === 'role') {
-    <section class="card">
-      <h2>Which best describes you?</h2>
-      <div class="choices choices--big">
-        <button type="button" (click)="chooseRole('HOMEOWNER')">
-          <span class="glyph">🏠</span> I own the home I live in
-        </button>
-        <button type="button" (click)="chooseRole('LANDLORD')">
-          <span class="glyph">🔑</span> I own a property others live in
-        </button>
-        <button type="button" (click)="chooseRole('RENTER')">
-          <span class="glyph">🛋️</span> I rent my home
-        </button>
-        <button type="button" class="choices__council" (click)="goToCouncil()">
-          <span class="glyph">🏛️</span> I work for Council
-          <small>Opens the equity dashboard — sign-in required</small>
-        </button>
-      </div>
-      <button type="button" class="link" (click)="back()">Back</button>
-    </section>
-  }
-
-  <!-- Step 2 -------------------------------------------------------------- -->
-  @if (step() === 'questions') {
-    <section class="card">
-      <h2>A few things about your place</h2>
-
-      @if (role() === 'RENTER' || role() === 'HOMEOWNER') {
-        <fieldset>
-          <legend>What type of home?</legend>
-          <div class="choices">
-            <button type="button" [class.on]="homeType() === 'HOUSE'" (click)="homeType.set('HOUSE')">House</button>
-            <button type="button" [class.on]="homeType() === 'APARTMENT'" (click)="homeType.set('APARTMENT')">Apartment or unit</button>
-            <button type="button" [class.on]="homeType() === 'TOWNHOUSE'" (click)="homeType.set('TOWNHOUSE')">Townhouse</button>
-          </div>
-        </fieldset>
+      @if (located(); as at) {
+        <div class="picked">
+          <span class="ico ico--lg" data-tone="green" aria-hidden="true">✔️</span>
+          <span class="picked__body">
+            <span class="picked__cap">Your area</span>
+            <strong class="picked__name">{{ at.label }}</strong>
+          </span>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn--ghost" (click)="clearLocation()">
+            <span class="btn__ico" aria-hidden="true">✏️</span> Change area
+          </button>
+          <button type="button" class="btn btn--primary btn--big" (click)="continueFromLocation()">
+            Continue <span class="btn__ico" aria-hidden="true">→</span>
+          </button>
+        </div>
       } @else {
-        <fieldset>
-          <legend>What type of property?</legend>
-          <div class="choices">
-            <button type="button" [class.on]="homeType() === 'SINGLE_DWELLING'" (click)="homeType.set('SINGLE_DWELLING')">Single dwelling</button>
-            <button type="button" [class.on]="homeType() === 'MULTI_UNIT'" (click)="homeType.set('MULTI_UNIT')">Multi-unit or apartment block</button>
-          </div>
-        </fieldset>
+        <div class="field">
+          <label class="field__label" for="loc-input">Suburb or postcode</label>
+          <span class="field__wrap">
+            <span class="ico ico--lg" data-tone="blue" aria-hidden="true">🔍</span>
+            <input
+              id="loc-input"
+              type="text"
+              placeholder="e.g. Warrawong, or 2502"
+              [value]="addressQuery()"
+              (input)="onAddressInput($any($event.target).value)"
+              aria-describedby="loc-help"
+              [attr.aria-busy]="searching() ? 'true' : null"
+              autocomplete="off"
+              autocapitalize="words"
+              spellcheck="false"
+              enterkeyhint="search"
+            />
+            @if (searching()) { <span class="spinner" aria-hidden="true"></span> }
+          </span>
+          <p class="field__help" id="loc-help">
+            Type at least three letters, then choose your area from the list that appears.
+          </p>
+        </div>
+
+        <p class="rule"><span>or</span></p>
+
+        <button
+          type="button"
+          class="btn btn--tonal btn--wide"
+          [disabled]="locating()"
+          [attr.aria-busy]="locating() ? 'true' : null"
+          (click)="useMyLocation()"
+        >
+          <span class="ico ico--md btn__ico" data-tone="violet" aria-hidden="true">🧭</span>
+          {{ locating() ? 'Finding you…' : 'Use my current location' }}
+        </button>
+
+        @if (addressResults().length) {
+          <h3 class="results__h" id="loc-results-h">Choose your area</h3>
+          <ul class="results" role="list" aria-labelledby="loc-results-h">
+            @for (r of addressResults(); track r.displayName) {
+              <li>
+                <button type="button" class="result" (click)="chooseAddress(r)">
+                  <span class="ico ico--md" data-tone="blue" aria-hidden="true">📍</span>
+                  <span class="result__name">{{ r.displayName }}</span>
+                  <span class="result__go" aria-hidden="true">→</span>
+                </button>
+              </li>
+            }
+          </ul>
+        } @else if (noMatches() && !searching()) {
+          <p class="empty">
+            <span class="empty__ico" aria-hidden="true">🔎</span>
+            <span>
+              No matches for “{{ addressQuery() }}”. Try just the suburb name, or the four-digit postcode.
+            </span>
+          </p>
+        }
       }
+    </section>
+  }
+
+  <!-- Step 2 - about you ----------------------------------------------------- -->
+  @if (step() === 'role') {
+    <section class="card" aria-labelledby="h-role">
+      <h2 class="card__h" id="h-role" #stepAnchor tabindex="-1">
+        <span class="ico ico--lg" data-tone="violet" aria-hidden="true">🙋</span>
+        <span>Which best describes you?</span>
+      </h2>
+      <p class="card__lead">
+        Pick one. It decides which savings we go looking for — you can come back and change it.
+      </p>
+
+      <div class="tiles">
+        @for (r of roleChoices; track r.value) {
+          <button type="button" class="tile" (click)="chooseRole(r.value)">
+            <span class="ico ico--xl" [attr.data-tone]="r.tone" aria-hidden="true">{{ r.glyph }}</span>
+            <span class="tile__body">
+              <span class="tile__title">{{ r.label }}</span>
+              <span class="tile__sub">{{ r.sub }}</span>
+            </span>
+            <span class="tile__go" aria-hidden="true">→</span>
+          </button>
+        }
+
+        <!--
+          The Council tile is a door out of the wizard rather than a fourth
+          answer to the same question, so it is set apart instead of sitting in
+          the run of three.
+        -->
+        <button type="button" class="tile tile--exit" (click)="goToCouncil()">
+          <span class="ico ico--xl" data-tone="slate" aria-hidden="true">🏛️</span>
+          <span class="tile__body">
+            <span class="tile__title">I work for Council</span>
+            <span class="tile__sub">Opens the equity dashboard — sign-in required</span>
+          </span>
+          <span class="tile__go" aria-hidden="true">→</span>
+        </button>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn btn--ghost" (click)="back()">
+          <span class="btn__ico" aria-hidden="true">←</span> Back
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- Step 3 - your place ---------------------------------------------------- -->
+  @if (step() === 'questions') {
+    <section class="card" aria-labelledby="h-questions">
+      <h2 class="card__h" id="h-questions" #stepAnchor tabindex="-1">
+        <span class="ico ico--lg" data-tone="teal" aria-hidden="true">🏘️</span>
+        <span>A few things about your place</span>
+      </h2>
+      <p class="card__lead">
+        Only the questions marked <span class="badge" data-tone="blue">Needed</span> have to be answered.
+        Everything else sharpens the numbers, and <strong>“not sure” is always a real answer</strong>.
+      </p>
+
+      <!-- Home or property type - required -->
+      <fieldset class="q" id="q-home-type" tabindex="-1" [class.q--todo]="attempted() && !homeType()">
+        <legend class="q__legend">
+          <span class="q__row">
+            <span class="ico ico--md" data-tone="teal" aria-hidden="true">🏠</span>
+            <span class="q__text">
+              {{ role() === 'LANDLORD' ? 'What type of property is it?' : 'What type of home is it?' }}
+            </span>
+            @if (attempted() && !homeType()) {
+              <span class="badge badge--solid" data-tone="rose"><span aria-hidden="true">⚠️</span> Needs an answer</span>
+            } @else {
+              <span class="badge" data-tone="blue">Needed</span>
+            }
+          </span>
+        </legend>
+        <div class="opts">
+          @for (o of homeChoices(); track o.value) {
+            <label class="opt" [class.is-on]="homeType() === o.value">
+              <input
+                class="opt__input"
+                type="radio"
+                name="homeType"
+                [value]="o.value"
+                [checked]="homeType() === o.value"
+                (change)="homeType.set(o.value)"
+              />
+              <span class="ico ico--lg opt__ico" [attr.data-tone]="o.tone" aria-hidden="true">{{ o.glyph }}</span>
+              <span class="opt__body">
+                <span class="opt__label">{{ o.label }}</span>
+                @if (o.sub) { <span class="opt__sub">{{ o.sub }}</span> }
+              </span>
+              <span class="opt__tick" aria-hidden="true">✓</span>
+            </label>
+          }
+        </div>
+      </fieldset>
 
       @if (role() !== 'LANDLORD') {
-        <fieldset>
-          <legend>Do you have a smart meter?</legend>
-          <p class="hint">Check your meter box — a digital display usually means yes.</p>
-          <div class="choices">
-            <button type="button" [class.on]="smartMeter() === 'YES'" (click)="smartMeter.set('YES')">Yes</button>
-            <button type="button" [class.on]="smartMeter() === 'NO'" (click)="smartMeter.set('NO')">No</button>
-            <button type="button" [class.on]="smartMeter() === 'NOT_SURE'" (click)="smartMeter.set('NOT_SURE')">Not sure</button>
+        <!-- Smart meter - required for renters, useful for everyone else -->
+        <fieldset
+          class="q"
+          id="q-smart-meter"
+          tabindex="-1"
+          [class.q--todo]="attempted() && role() === 'RENTER' && !smartMeter()"
+        >
+          <legend class="q__legend">
+            <span class="q__row">
+              <span class="ico ico--md" data-tone="blue" aria-hidden="true">⚡</span>
+              <span class="q__text">Do you have a smart meter?</span>
+              @if (role() === 'RENTER') {
+                @if (attempted() && !smartMeter()) {
+                  <span class="badge badge--solid" data-tone="rose"><span aria-hidden="true">⚠️</span> Needs an answer</span>
+                } @else {
+                  <span class="badge" data-tone="blue">Needed</span>
+                }
+              }
+            </span>
+          </legend>
+          <p class="q__help">
+            Have a look in your meter box — a digital display usually means yes. It's what unlocks the free
+            11am–2pm power window.
+          </p>
+          <div class="opts opts--trio">
+            @for (o of answerChoices; track o.value) {
+              <label class="opt" [class.is-on]="smartMeter() === o.value">
+                <input
+                  class="opt__input"
+                  type="radio"
+                  name="smartMeter"
+                  [value]="o.value"
+                  [checked]="smartMeter() === o.value"
+                  (change)="smartMeter.set(o.value)"
+                />
+                <span class="ico ico--lg opt__ico" [attr.data-tone]="o.tone" aria-hidden="true">{{ o.glyph }}</span>
+                <span class="opt__body">
+                  <span class="opt__label">{{ o.label }}</span>
+                  @if (o.sub) { <span class="opt__sub">{{ o.sub }}</span> }
+                </span>
+                <span class="opt__tick" aria-hidden="true">✓</span>
+              </label>
+            }
           </div>
         </fieldset>
 
-        <fieldset>
-          <legend>Is anyone usually home between 11am and 2pm on weekdays?</legend>
-          <div class="choices">
-            <button type="button" [class.on]="daytimePresence() === 'OFTEN'" (click)="daytimePresence.set('OFTEN')">Often</button>
-            <button type="button" [class.on]="daytimePresence() === 'SOMETIMES'" (click)="daytimePresence.set('SOMETIMES')">Sometimes</button>
-            <button type="button" [class.on]="daytimePresence() === 'RARELY'" (click)="daytimePresence.set('RARELY')">Rarely</button>
+        <!-- Daytime presence -->
+        <fieldset class="q" id="q-daytime" tabindex="-1">
+          <legend class="q__legend">
+            <span class="q__row">
+              <span class="ico ico--md" data-tone="amber" aria-hidden="true">🕛</span>
+              <span class="q__text">Is anyone usually home between 11am and 2pm on weekdays?</span>
+              <span class="badge" data-tone="slate">Optional</span>
+            </span>
+          </legend>
+          <p class="q__help">Being out is fine — a timer on the washing machine does the same job.</p>
+          <div class="opts opts--trio">
+            @for (o of presenceChoices; track o.value) {
+              <label class="opt" [class.is-on]="daytimePresence() === o.value">
+                <input
+                  class="opt__input"
+                  type="radio"
+                  name="daytimePresence"
+                  [value]="o.value"
+                  [checked]="daytimePresence() === o.value"
+                  (change)="daytimePresence.set(o.value)"
+                />
+                <span class="ico ico--lg opt__ico" [attr.data-tone]="o.tone" aria-hidden="true">{{ o.glyph }}</span>
+                <span class="opt__body">
+                  <span class="opt__label">{{ o.label }}</span>
+                  @if (o.sub) { <span class="opt__sub">{{ o.sub }}</span> }
+                </span>
+                <span class="opt__tick" aria-hidden="true">✓</span>
+              </label>
+            }
           </div>
         </fieldset>
       }
 
       @if (role() === 'HOMEOWNER' || role() === 'LANDLORD') {
-        <fieldset>
-          <legend>{{ role() === 'LANDLORD' ? 'Solar installed on the property?' : 'Do you have rooftop solar?' }}</legend>
-          <div class="choices">
-            <button type="button" [class.on]="hasSolar() === 'YES'" (click)="hasSolar.set('YES')">Yes</button>
-            <button type="button" [class.on]="hasSolar() === 'NO'" (click)="hasSolar.set('NO')">No</button>
-            <button type="button" [class.on]="hasSolar() === 'NOT_SURE'" (click)="hasSolar.set('NOT_SURE')">Not sure</button>
+        <!-- Solar - required -->
+        <fieldset class="q" id="q-solar" tabindex="-1" [class.q--todo]="attempted() && !hasSolar()">
+          <legend class="q__legend">
+            <span class="q__row">
+              <span class="ico ico--md" data-tone="amber" aria-hidden="true">☀️</span>
+              <span class="q__text">
+                {{ role() === 'LANDLORD' ? 'Is solar installed on the property?' : 'Do you have rooftop solar?' }}
+              </span>
+              @if (attempted() && !hasSolar()) {
+                <span class="badge badge--solid" data-tone="rose"><span aria-hidden="true">⚠️</span> Needs an answer</span>
+              } @else {
+                <span class="badge" data-tone="blue">Needed</span>
+              }
+            </span>
+          </legend>
+          <div class="opts opts--trio">
+            @for (o of answerChoices; track o.value) {
+              <label class="opt" [class.is-on]="hasSolar() === o.value">
+                <input
+                  class="opt__input"
+                  type="radio"
+                  name="hasSolar"
+                  [value]="o.value"
+                  [checked]="hasSolar() === o.value"
+                  (change)="hasSolar.set(o.value)"
+                />
+                <span class="ico ico--lg opt__ico" [attr.data-tone]="o.tone" aria-hidden="true">{{ o.glyph }}</span>
+                <span class="opt__body">
+                  <span class="opt__label">{{ o.label }}</span>
+                  @if (o.sub) { <span class="opt__sub">{{ o.sub }}</span> }
+                </span>
+                <span class="opt__tick" aria-hidden="true">✓</span>
+              </label>
+            }
           </div>
+
           @if (hasSolar() === 'YES') {
-            <label class="inline">
-              Roughly how many kW?
-              <input type="number" min="0" step="0.1" [value]="solarKw() ?? ''"
-                     (input)="solarKw.set(+$any($event.target).value || null)" />
-            </label>
+            <div class="subfield">
+              <label class="subfield__label" for="solar-kw">
+                Roughly how many kW? <span class="subfield__opt">(optional)</span>
+              </label>
+              <span class="subfield__row">
+                <input
+                  id="solar-kw"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  inputmode="decimal"
+                  aria-describedby="solar-kw-help"
+                  [value]="solarKw() ?? ''"
+                  (input)="solarKw.set(+$any($event.target).value || null)"
+                />
+                <span class="subfield__unit" aria-hidden="true">kW</span>
+              </span>
+              <p class="subfield__help" id="solar-kw-help">
+                It's printed on the inverter, or on your install paperwork. Leave it blank if you don't know.
+              </p>
+            </div>
           }
         </fieldset>
       }
 
       @if (role() === 'HOMEOWNER') {
-        <fieldset>
-          <legend>Do you have a home battery?</legend>
-          <div class="choices">
-            <button type="button" [class.on]="hasBattery() === 'YES'" (click)="hasBattery.set('YES')">Yes</button>
-            <button type="button" [class.on]="hasBattery() === 'NO'" (click)="hasBattery.set('NO')">No</button>
-            <button type="button" [class.on]="hasBattery() === 'NOT_SURE'" (click)="hasBattery.set('NOT_SURE')">Not sure</button>
+        <!-- Battery -->
+        <fieldset class="q" id="q-battery" tabindex="-1">
+          <legend class="q__legend">
+            <span class="q__row">
+              <span class="ico ico--md" data-tone="green" aria-hidden="true">🔋</span>
+              <span class="q__text">Do you have a home battery?</span>
+              <span class="badge" data-tone="slate">Optional</span>
+            </span>
+          </legend>
+          <div class="opts opts--trio">
+            @for (o of answerChoices; track o.value) {
+              <label class="opt" [class.is-on]="hasBattery() === o.value">
+                <input
+                  class="opt__input"
+                  type="radio"
+                  name="hasBattery"
+                  [value]="o.value"
+                  [checked]="hasBattery() === o.value"
+                  (change)="hasBattery.set(o.value)"
+                />
+                <span class="ico ico--lg opt__ico" [attr.data-tone]="o.tone" aria-hidden="true">{{ o.glyph }}</span>
+                <span class="opt__body">
+                  <span class="opt__label">{{ o.label }}</span>
+                  @if (o.sub) { <span class="opt__sub">{{ o.sub }}</span> }
+                </span>
+                <span class="opt__tick" aria-hidden="true">✓</span>
+              </label>
+            }
           </div>
         </fieldset>
-        <label class="check">
-          <input type="checkbox" [checked]="wantsToSell()" (change)="wantsToSell.set($any($event.target).checked)" />
-          I'd like to sell my surplus to neighbours at a price I set
-        </label>
-      }
-
-      @if (role() === 'LANDLORD') {
-        <label class="check">
-          <input type="checkbox" [checked]="openToSubsidised()" (change)="openToSubsidised.set($any($event.target).checked)" />
-          I'd consider solar if rebates covered a large share of the cost
-        </label>
-        <label class="check">
-          <input type="checkbox" [checked]="offerToTenants()" (change)="offerToTenants.set($any($event.target).checked)" />
-          I'd offer tenants solar power as part of the tenancy
-        </label>
       }
 
       @if (role() === 'RENTER') {
-        <fieldset>
-          <legend>Would you prefer options with no upfront cost?</legend>
-          <div class="choices">
-            <button type="button" [class.on]="upfront() === 'NO_UPFRONT'" (click)="upfront.set('NO_UPFRONT')">No upfront cost</button>
-            <button type="button" [class.on]="upfront() === 'OPEN_TO_INVESTMENT'" (click)="upfront.set('OPEN_TO_INVESTMENT')">Open to a one-off that pays back</button>
+        <!-- Upfront preference -->
+        <fieldset class="q" id="q-upfront" tabindex="-1">
+          <legend class="q__legend">
+            <span class="q__row">
+              <span class="ico ico--md" data-tone="green" aria-hidden="true">💷</span>
+              <span class="q__text">Would you prefer options with no upfront cost?</span>
+              <span class="badge" data-tone="slate">Optional</span>
+            </span>
+          </legend>
+          <div class="opts">
+            @for (o of upfrontChoices; track o.value) {
+              <label class="opt" [class.is-on]="upfront() === o.value">
+                <input
+                  class="opt__input"
+                  type="radio"
+                  name="upfront"
+                  [value]="o.value"
+                  [checked]="upfront() === o.value"
+                  (change)="upfront.set(o.value)"
+                />
+                <span class="ico ico--lg opt__ico" [attr.data-tone]="o.tone" aria-hidden="true">{{ o.glyph }}</span>
+                <span class="opt__body">
+                  <span class="opt__label">{{ o.label }}</span>
+                  @if (o.sub) { <span class="opt__sub">{{ o.sub }}</span> }
+                </span>
+                <span class="opt__tick" aria-hidden="true">✓</span>
+              </label>
+            }
           </div>
         </fieldset>
-        <label class="check">
-          <input type="checkbox" [checked]="bigAppliances()" (change)="bigAppliances.set($any($event.target).checked)" />
-          I run an EV, pool pump or other big appliances
-        </label>
       }
 
-      @if (role() !== 'LANDLORD') {
-        <label class="check">
-          <input type="checkbox" [checked]="concessionCard()" (change)="concessionCard.set($any($event.target).checked)" />
-          I hold a concession card (Pensioner, Health Care, Veteran)
-          <small>This unlocks extra rebates</small>
-        </label>
+      <!-- Anything else that applies - all optional, all tick boxes -->
+      <fieldset class="q" id="q-extras" tabindex="-1">
+        <legend class="q__legend">
+          <span class="q__row">
+            <span class="ico ico--md" data-tone="violet" aria-hidden="true">➕</span>
+            <span class="q__text">Anything else that applies?</span>
+            <span class="badge" data-tone="slate">Optional</span>
+          </span>
+        </legend>
+
+        @if (role() === 'HOMEOWNER') {
+          <label class="check" [class.is-on]="wantsToSell()">
+            <input
+              class="check__input"
+              type="checkbox"
+              [checked]="wantsToSell()"
+              (change)="wantsToSell.set($any($event.target).checked)"
+            />
+            <span class="check__box" aria-hidden="true">✓</span>
+            <span class="ico ico--md" data-tone="green" aria-hidden="true">🤝</span>
+            <span class="check__body">
+              <span class="check__label">I'd like to sell my surplus to neighbours at a price I set</span>
+              <span class="check__sub">Usually about three times a standard feed-in tariff</span>
+            </span>
+          </label>
+        }
+
+        @if (role() === 'LANDLORD') {
+          <label class="check" [class.is-on]="openToSubsidised()">
+            <input
+              class="check__input"
+              type="checkbox"
+              [checked]="openToSubsidised()"
+              (change)="openToSubsidised.set($any($event.target).checked)"
+            />
+            <span class="check__box" aria-hidden="true">✓</span>
+            <span class="ico ico--md" data-tone="amber" aria-hidden="true">🧾</span>
+            <span class="check__body">
+              <span class="check__label">I'd consider solar if rebates covered a large share of the cost</span>
+              <span class="check__sub">Multi-unit blocks can attract up to 50% off the install</span>
+            </span>
+          </label>
+
+          <label class="check" [class.is-on]="offerToTenants()">
+            <input
+              class="check__input"
+              type="checkbox"
+              [checked]="offerToTenants()"
+              (change)="offerToTenants.set($any($event.target).checked)"
+            />
+            <span class="check__box" aria-hidden="true">✓</span>
+            <span class="ico ico--md" data-tone="indigo" aria-hidden="true">🏘️</span>
+            <span class="check__body">
+              <span class="check__label">I'd offer tenants solar power as part of the tenancy</span>
+              <span class="check__sub">Split billing — ongoing return, and tenants who stay</span>
+            </span>
+          </label>
+        }
+
+        @if (role() === 'RENTER') {
+          <label class="check" [class.is-on]="bigAppliances()">
+            <input
+              class="check__input"
+              type="checkbox"
+              [checked]="bigAppliances()"
+              (change)="bigAppliances.set($any($event.target).checked)"
+            />
+            <span class="check__box" aria-hidden="true">✓</span>
+            <span class="ico ico--md" data-tone="orange" aria-hidden="true">🔌</span>
+            <span class="check__body">
+              <span class="check__label">I run an EV, pool pump or other big appliances</span>
+              <span class="check__sub">Big loads are where shifting the time saves the most</span>
+            </span>
+          </label>
+        }
+
+        @if (role() !== 'LANDLORD') {
+          <label class="check" [class.is-on]="concessionCard()">
+            <input
+              class="check__input"
+              type="checkbox"
+              [checked]="concessionCard()"
+              (change)="concessionCard.set($any($event.target).checked)"
+            />
+            <span class="check__box" aria-hidden="true">✓</span>
+            <span class="ico ico--md" data-tone="rose" aria-hidden="true">🎫</span>
+            <span class="check__body">
+              <span class="check__label">I hold a concession card (Pensioner, Health Care, Veteran)</span>
+              <span class="check__sub">This unlocks extra rebates — we never ask about your income</span>
+            </span>
+          </label>
+        }
+      </fieldset>
+
+      @if (attempted() && missing().length) {
+        <div class="todo" role="alert" tabindex="-1" #todoBox>
+          <span class="todo__ico" aria-hidden="true">⚠️</span>
+          <div class="todo__body">
+            <strong class="todo__title">
+              Almost there — {{ missing().length }} still to answer
+            </strong>
+            <ul class="todo__list" role="list">
+              @for (m of missing(); track m.id) {
+                <li>
+                  <button type="button" class="todo__jump" (click)="focusQuestion(m.id)">
+                    {{ m.label }} <span aria-hidden="true">↓</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
       }
 
-      <div class="actions">
-        <button type="button" class="link" (click)="back()">Back</button>
-        <button type="button" class="primary" [disabled]="!canBuild || building()" (click)="buildPlan()">
+      <div class="actions actions--bar">
+        <button type="button" class="btn btn--ghost" (click)="back()">
+          <span class="btn__ico" aria-hidden="true">←</span> Back
+        </button>
+        <p class="actions__count">
+          {{ answeredCount() }} of {{ requiredQuestions().length }} needed answers given
+        </p>
+        <button
+          type="button"
+          class="btn btn--primary btn--big"
+          [disabled]="building()"
+          [attr.aria-busy]="building() ? 'true' : null"
+          (click)="buildPlan()"
+        >
+          @if (building()) { <span class="spinner spinner--light" aria-hidden="true"></span> }
           {{ building() ? 'Building your plan…' : 'Show my plan' }}
+          @if (!building()) { <span class="btn__ico" aria-hidden="true">→</span> }
         </button>
       </div>
     </section>
   }
 
-  <!-- Plan ----------------------------------------------------------------- -->
+  <!-- Step 4 - your plan ----------------------------------------------------- -->
   @if (step() === 'plan' && plan(); as p) {
-    <section class="plan">
-      <header class="plan__head">
-        <h2>Your Maximum Outcome Plan — {{ p.suburb }}</h2>
-        <p class="headline">
-          You could save or earn
-          <strong>{{ money(p.totalAnnualLow, p.totalAnnualHigh) }} a year.</strong>
-          {{ p.zeroUpfrontCount }} of your options cost $0 upfront.
-        </p>
-        @if (headline(); as h) {
-          <p class="headline__rec">Start with: <strong>{{ h.title }}</strong> — {{ money(h.annualLow, h.annualHigh) }}/yr</p>
-        }
-      </header>
+    <section class="plan" aria-labelledby="h-plan">
+      <h2 class="card__h" id="h-plan" #stepAnchor tabindex="-1">
+        <span class="ico ico--lg" data-tone="green" aria-hidden="true">🎉</span>
+        <span>Your Maximum Outcome Plan — {{ p.suburb }}</span>
+      </h2>
 
-      <div class="grid-now" [attr.data-state]="p.grid.state">
-        <h3>Right now in {{ p.suburb }} ⚡</h3>
-        <p class="grid-now__state">
-          Grid is in <strong>{{ stateLabel(p.grid.state) }}</strong>
-          · local price ~{{ p.grid.priceSignalCkwh }}c/kWh
-          @if (p.grid.exportConstrained) { · <em>export capped</em> }
+      <div class="totals">
+        <p class="total">
+          <span class="ico ico--lg total__ico" data-tone="green" aria-hidden="true">💰</span>
+          <span class="total__val">{{ money(p.totalAnnualLow, p.totalAnnualHigh) }}</span>
+          <span class="total__cap">saved or earned a year</span>
         </p>
-        <p>{{ p.gridTip }}</p>
-        <p class="grid-now__nums">
-          supply {{ p.grid.supplyKw }} kW · demand {{ p.grid.demandKw }} kW
-          · {{ p.grid.cellCount }} grid cells sampled
+        <p class="total">
+          <span class="ico ico--lg total__ico" data-tone="blue" aria-hidden="true">🆓</span>
+          <span class="total__val">{{ p.zeroUpfrontCount }}</span>
+          <span class="total__cap">of your options cost $0 upfront</span>
         </p>
       </div>
 
+      @if (headline(); as h) {
+        <p class="startwith">
+          <span class="ico ico--md" data-tone="amber" aria-hidden="true">⭐</span>
+          <span>
+            <strong>Start with {{ h.title }}</strong>
+            — {{ money(h.annualLow, h.annualHigh) }} a year.
+          </span>
+        </p>
+      }
+
+      <section class="gridnow" [attr.data-tone]="stateTone(p.grid.state)" aria-labelledby="h-gridnow">
+        <h3 class="gridnow__h" id="h-gridnow">
+          <span class="gridnow__ico" aria-hidden="true">{{ stateGlyph(p.grid.state) }}</span>
+          <span>Right now in {{ p.suburb }}</span>
+        </h3>
+        <p class="gridnow__state" aria-live="polite">
+          <span class="badge" [attr.data-tone]="stateTone(p.grid.state)">{{ stateLabel(p.grid.state) }}</span>
+          <span class="gridnow__note">{{ stateNote(p.grid.state) }}</span>
+        </p>
+        <p class="gridnow__price">
+          Local price about <strong>{{ p.grid.priceSignalCkwh }}c a kWh</strong>.
+          @if (p.grid.exportConstrained) {
+            <span class="badge" data-tone="orange"><span aria-hidden="true">🚧</span> Export capped</span>
+          }
+        </p>
+        <p class="gridnow__tip">{{ p.gridTip }}</p>
+        <p class="gridnow__nums">
+          Supply {{ p.grid.supplyKw }} kW · demand {{ p.grid.demandKw }} kW ·
+          {{ p.grid.cellCount }} grid cells sampled
+        </p>
+      </section>
+
       @if (p.doThisWeek.length) {
-        <h3>Do this week</h3>
-        <ol class="recs">
+        <h3 class="plan__h">
+          <span class="ico ico--md" data-tone="green" aria-hidden="true">📅</span>
+          <span>Do this week</span>
+        </h3>
+        <ol class="recs" role="list">
           @for (r of p.doThisWeek; track r.id) {
-            <li>
-              <div class="rec__top">
-                <strong>{{ r.title }}</strong>
-                <span class="rec__money">{{ money(r.annualLow, r.annualHigh) }}/yr</span>
+            <li class="rec">
+              <div class="rec__head">
+                <h4 class="rec__title">{{ r.title }}</h4>
+                <p class="rec__money">
+                  <span aria-hidden="true">💵</span>{{ money(r.annualLow, r.annualHigh) }}<span class="rec__per">a year</span>
+                </p>
               </div>
-              <p>{{ r.summary }}</p>
-              <p class="rec__how">{{ r.howTo }}</p>
+              <p class="rec__summary">{{ r.summary }}</p>
+              <p class="rec__how"><span class="rec__howcap">How:</span> {{ r.howTo }}</p>
               <p class="rec__meta">
-                <span class="tag" [class.tag--free]="r.free">
+                <span class="badge" [attr.data-tone]="r.free ? 'green' : 'blue'">
+                  <span aria-hidden="true">{{ r.free ? '🆓' : '💳' }}</span>
                   {{ r.free ? '$0 upfront' : '$' + r.upfrontCost + ' upfront' }}
                 </span>
-                <span class="tag">{{ effortLabel(r.effort) }}</span>
-                <span class="rec__source">{{ r.source }}</span>
+                <span class="badge" data-tone="violet">
+                  <span aria-hidden="true">{{ effortGlyph(r.effort) }}</span>
+                  {{ effortLabel(r.effort) }}
+                </span>
+                <span class="rec__source">Source: {{ r.source }}</span>
               </p>
             </li>
           }
@@ -238,42 +688,66 @@
       }
 
       @if (p.doThisMonth.length) {
-        <h3>Do this month</h3>
-        <ol class="recs" [start]="p.doThisWeek.length + 1">
+        <h3 class="plan__h">
+          <span class="ico ico--md" data-tone="blue" aria-hidden="true">🗓️</span>
+          <span>Do this month</span>
+        </h3>
+        <ol class="recs" role="list" [style.counter-reset]="'rec ' + p.doThisWeek.length">
           @for (r of p.doThisMonth; track r.id) {
-            <li>
-              <div class="rec__top">
-                <strong>{{ r.title }}</strong>
-                <span class="rec__money">{{ money(r.annualLow, r.annualHigh) }}/yr</span>
+            <li class="rec">
+              <div class="rec__head">
+                <h4 class="rec__title">{{ r.title }}</h4>
+                <p class="rec__money">
+                  <span aria-hidden="true">💵</span>{{ money(r.annualLow, r.annualHigh) }}<span class="rec__per">a year</span>
+                </p>
               </div>
-              <p>{{ r.summary }}</p>
-              <p class="rec__how">{{ r.howTo }}</p>
+              <p class="rec__summary">{{ r.summary }}</p>
+              <p class="rec__how"><span class="rec__howcap">How:</span> {{ r.howTo }}</p>
               <p class="rec__meta">
-                <span class="tag" [class.tag--free]="r.free">
+                <span class="badge" [attr.data-tone]="r.free ? 'green' : 'blue'">
+                  <span aria-hidden="true">{{ r.free ? '🆓' : '💳' }}</span>
                   {{ r.free ? '$0 upfront' : '$' + r.upfrontCost + ' upfront' }}
                 </span>
-                <span class="tag">{{ effortLabel(r.effort) }}</span>
-                <span class="rec__source">{{ r.source }}</span>
+                <span class="badge" data-tone="violet">
+                  <span aria-hidden="true">{{ effortGlyph(r.effort) }}</span>
+                  {{ effortLabel(r.effort) }}
+                </span>
+                <span class="rec__source">Source: {{ r.source }}</span>
               </p>
             </li>
           }
         </ol>
       }
 
-      <h3>How to maximise the benefit</h3>
-      <ul class="tips">
-        @for (tip of p.maximiseTips; track tip) { <li>{{ tip }}</li> }
+      <h3 class="plan__h">
+        <span class="ico ico--md" data-tone="amber" aria-hidden="true">💡</span>
+        <span>How to get the most out of it</span>
+      </h3>
+      <ul class="tips" role="list">
+        @for (tip of p.maximiseTips; track tip) {
+          <li><span class="ico ico--sm ico--round" data-tone="amber" aria-hidden="true">✔</span><span>{{ tip }}</span></li>
+        }
       </ul>
 
       @if (p.findOutNext.length) {
-        <h3>Worth finding out</h3>
-        <ul class="tips tips--muted">
-          @for (item of p.findOutNext; track item) { <li>{{ item }}</li> }
+        <h3 class="plan__h">
+          <span class="ico ico--md" data-tone="slate" aria-hidden="true">🔎</span>
+          <span>Worth finding out</span>
+        </h3>
+        <ul class="tips tips--muted" role="list">
+          @for (item of p.findOutNext; track item) {
+            <li><span class="ico ico--sm ico--round" data-tone="slate" aria-hidden="true">?</span><span>{{ item }}</span></li>
+          }
         </ul>
       }
 
-      <div class="actions">
-        <button type="button" class="link" (click)="startOver()">Start over</button>
+      <div class="actions actions--plan">
+        <button type="button" class="btn btn--ghost" (click)="startOver()">
+          <span class="btn__ico" aria-hidden="true">↺</span> Start over
+        </button>
+        <button type="button" class="btn btn--tonal" (click)="printPlan()">
+          <span class="ico ico--md btn__ico" data-tone="blue" aria-hidden="true">🖨️</span> Print or save as PDF
+        </button>
       </div>
     </section>
   }
