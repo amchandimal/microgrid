@@ -82,8 +82,8 @@ public class GridController {
                 GridService.MAX_CELLS,
                 GridService.REFERENCE_LAT,
                 IllawarraRegion.surveyedBounds(),
-                "The supply and demand overlay is modelled from Helensburgh to Kiama."
-                        + " The rest of the region is mapped but not yet surveyed.",
+                "Overlay modelled from Helensburgh to Kiama - the rest of the region"
+                        + " is mapped, not yet surveyed.",
                 new Focus(
                         IllawarraRegion.FOCUS_LAT,
                         IllawarraRegion.FOCUS_LNG,

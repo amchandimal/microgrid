@@ -31,7 +31,7 @@ class RecaptchaInterceptorTest {
             new RecaptchaInterceptor(properties("/api/health/**"), assessments);
 
     private static RecaptchaProperties properties(String... exempt) {
-        return new RecaptchaProperties(true, "project", "site-key", 0.5, exempt);
+        return new RecaptchaProperties(true, "project", "site-key", "api-key", 0.5, exempt);
     }
 
     private static MockHttpServletRequest request(String method, String path, String token) {

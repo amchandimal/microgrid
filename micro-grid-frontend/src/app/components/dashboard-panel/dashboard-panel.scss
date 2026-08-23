@@ -13,6 +13,15 @@
   gap: 1rem;
   background: var(--mg-surface-2);
 
+  /*
+   * Every panel keeps its natural height and the column scrolls. Without this
+   * the panels shrink instead: flex items give up their own height before
+   * their container agrees to scroll, so a dashboard taller than its column
+   * squashes each panel to a sliver - which `overflow: hidden` on .panel then
+   * clips, leaving heads with no bodies.
+   */
+  > * { flex: none; }
+
   &__head {
     display: flex;
     align-items: flex-start;
@@ -371,7 +380,11 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  max-height: 17rem;
+  /*
+   * Taller than it was, because the three panels below it now start folded.
+   * Viewport-relative so a big screen shows more rows rather than more gap.
+   */
+  max-height: clamp(17rem, 52vh, 34rem);
   overflow-y: auto;
 }
 
@@ -441,4 +454,76 @@
 
 .cards--prices {
   margin-bottom: 0.75rem;
+}
+
+/* --- panel bodies and folding ---------------------------------------------- */
+
+/*
+ * The panel head is a bar with its own padding and rule; everything below it
+ * needs its own inset, or bordered content like the spread strip sits flush
+ * against the panel's own border.
+ */
+.panel__body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.75rem 0.9rem;
+
+  /* The chart carries its own padding for standalone use; not needed here. */
+  > .chart { padding: 0.6rem 0 0; }
+
+  /* A sub-head inside a body is a divider, not another bar. */
+  > .panel__head--sub {
+    padding: 0.7rem 0 0.4rem;
+    border-bottom: 0;
+  }
+}
+
+/* Systems by area is the panel worth the room; its list carries the height. */
+.panel--areas {
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * Folded shut on load. These three are reference rather than headline - the
+ * trading numbers are placeholders and the two site lists are what the map
+ * already pins - so they start out of the way and the area table gets the
+ * height.
+ */
+.panel--fold {
+  > summary {
+    cursor: pointer;
+    user-select: none;
+    /* Both are needed to drop the native disclosure triangle across browsers. */
+    list-style: none;
+
+    &::-webkit-details-marker { display: none; }
+    &::marker { content: ''; }
+
+    &:hover h3 { color: var(--mg-accent); }
+
+    &:focus-visible {
+      outline: 2px solid var(--mg-accent);
+      outline-offset: -2px;
+    }
+
+    h3::before {
+      content: '';
+      display: inline-block;
+      width: 0;
+      height: 0;
+      margin-right: 0.45rem;
+      vertical-align: 1px;
+      border-left: 5px solid currentColor;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+      transition: transform 0.15s ease;
+    }
+  }
+
+  /* Closed, the head's rule would be a line under nothing. */
+  &:not([open]) > summary { border-bottom: 0; }
+
+  &[open] > summary h3::before { transform: rotate(90deg); }
 }
