@@ -53,9 +53,9 @@
     <p class="loading">Loading the installed fleet…</p>
   }
 
-  <!-- Systems by area -->
+  <!-- Systems by area — the panel the others fold up to make room for -->
   @if (installations(); as fleet) {
-    <section class="panel">
+    <section class="panel panel--areas">
       <div class="panel__head">
         <h3>Systems by area</h3>
         <div class="toggle" role="group" aria-label="Order areas by">
@@ -76,89 +76,91 @@
         </div>
       </div>
 
-      <ul class="areas">
-        @for (area of areas(); track area.id) {
-          <li class="area">
-            <span class="area__name" [title]="area.postcode ? area.name + ' · ' + area.postcode : area.name">
-              {{ area.name }}
-            </span>
-            <span class="area__track">
-              <span class="area__fill" [style.width.%]="areaBar(area)"></span>
-            </span>
-            <span class="area__value">{{ areaValue(area) | number }}</span>
-            <span class="area__share">{{ sharePct(area) | number: '1.1-1' }}%</span>
-          </li>
-        }
-      </ul>
+      <div class="panel__body">
+        <ul class="areas">
+          @for (area of areas(); track area.id) {
+            <li class="area">
+              <span class="area__name" [title]="area.postcode ? area.name + ' · ' + area.postcode : area.name">
+                {{ area.name }}
+              </span>
+              <span class="area__track">
+                <span class="area__fill" [style.width.%]="areaBar(area)"></span>
+              </span>
+              <span class="area__value">{{ areaValue(area) | number }}</span>
+              <span class="area__share">{{ sharePct(area) | number: '1.1-1' }}%</span>
+            </li>
+          }
+        </ul>
 
-      <p class="method">
-        {{ fleet.method }}
-      </p>
+        <p class="method">{{ fleet.method }}</p>
+      </div>
     </section>
   }
 
   <!-- Indicative trading signal -->
-  <section class="panel">
-    <div class="panel__head">
+  <details class="panel panel--fold">
+    <summary class="panel__head">
       <h3>Trading signal</h3>
       <span class="badge">INDICATIVE</span>
-    </div>
+    </summary>
 
-    <div class="cards cards--prices">
-      <article class="card card--buy">
-        <span class="card__label">Buying Price</span>
-        <span class="card__value">{{ buyPrice() | number: '1.2-2' }}<small>c/kWh</small></span>
-        <span class="card__meta up">▲ 4.2% vs yesterday</span>
-      </article>
+    <div class="panel__body">
+      <div class="cards cards--prices">
+        <article class="card card--buy">
+          <span class="card__label">Buying Price</span>
+          <span class="card__value">{{ buyPrice() | number: '1.2-2' }}<small>c/kWh</small></span>
+          <span class="card__meta up">▲ 4.2% vs yesterday</span>
+        </article>
 
-      <article class="card card--sell">
-        <span class="card__label">Selling Price</span>
-        <span class="card__value">{{ sellPrice() | number: '1.2-2' }}<small>c/kWh</small></span>
-        <span class="card__meta down">▼ 1.8% vs yesterday</span>
-      </article>
-    </div>
-
-    <div class="spread">
-      <div>
-        <span class="spread__label">Spread</span>
-        <strong>{{ spread() | number: '1.2-2' }} c/kWh</strong>
+        <article class="card card--sell">
+          <span class="card__label">Selling Price</span>
+          <span class="card__value">{{ sellPrice() | number: '1.2-2' }}<small>c/kWh</small></span>
+          <span class="card__meta down">▼ 1.8% vs yesterday</span>
+        </article>
       </div>
-      <div class="spread__bar">
-        <div class="spread__fill" [style.width.%]="margin()"></div>
-      </div>
-      <div class="spread__pct">{{ margin() }}%</div>
-    </div>
 
-    <div class="panel__head panel__head--sub">
-      <h4>Price curve — today</h4>
-      <div class="chart-key">
-        <span><i class="dot dot--buy"></i>Buy</span>
-        <span><i class="dot dot--sell"></i>Sell</span>
-      </div>
-    </div>
-    <div class="chart">
-      @for (p of priceCurve; track p.hour) {
-        <div class="chart__col" [title]="p.hour + ':00 — buy ' + p.buy + 'c / sell ' + p.sell + 'c'">
-          <div class="chart__bars">
-            <div class="bar bar--buy" [style.height]="barHeight(p.buy)"></div>
-            <div class="bar bar--sell" [style.height]="barHeight(p.sell)"></div>
-          </div>
-          <span class="chart__label">{{ p.hour }}</span>
+      <div class="spread">
+        <div>
+          <span class="spread__label">Spread</span>
+          <strong>{{ spread() | number: '1.2-2' }} c/kWh</strong>
         </div>
-      }
+        <div class="spread__bar">
+          <div class="spread__fill" [style.width.%]="margin()"></div>
+        </div>
+        <div class="spread__pct">{{ margin() }}%</div>
+      </div>
+
+      <div class="panel__head panel__head--sub">
+        <h4>Price curve — today</h4>
+        <div class="chart-key">
+          <span><i class="dot dot--buy"></i>Buy</span>
+          <span><i class="dot dot--sell"></i>Sell</span>
+        </div>
+      </div>
+      <div class="chart">
+        @for (p of priceCurve; track p.hour) {
+          <div class="chart__col" [title]="p.hour + ':00 — buy ' + p.buy + 'c / sell ' + p.sell + 'c'">
+            <div class="chart__bars">
+              <div class="bar bar--buy" [style.height]="barHeight(p.buy)"></div>
+              <div class="bar bar--sell" [style.height]="barHeight(p.sell)"></div>
+            </div>
+            <span class="chart__label">{{ p.hour }}</span>
+          </div>
+        }
+      </div>
+      <p class="method">
+        Placeholder peer-to-peer prices — there is no trading backend behind these
+        yet, and they are the only numbers on this panel that are not measured.
+      </p>
     </div>
-    <p class="method">
-      Placeholder peer-to-peer prices — there is no trading backend behind these
-      yet, and they are the only numbers on this panel that are not measured.
-    </p>
-  </section>
+  </details>
 
   <!-- Suppliers -->
-  <section class="panel">
-    <div class="panel__head">
+  <details class="panel panel--fold">
+    <summary class="panel__head">
       <h3>Energy Suppliers</h3>
       <span class="count">{{ supplierCount() }}</span>
-    </div>
+    </summary>
     <ul class="list">
       @for (s of suppliers(); track s.id) {
         <li class="row">
@@ -172,14 +174,14 @@
         </li>
       }
     </ul>
-  </section>
+  </details>
 
   <!-- Household clusters -->
-  <section class="panel">
-    <div class="panel__head">
+  <details class="panel panel--fold">
+    <summary class="panel__head">
       <h3>Household clusters</h3>
       <span class="count">{{ householdCount() }}</span>
-    </div>
+    </summary>
     <ul class="list">
       @for (h of households(); track h.id) {
         <li class="row">
@@ -193,7 +195,7 @@
         </li>
       }
     </ul>
-  </section>
+  </details>
 
   @if (installations(); as fleet) {
     <p class="sources">
