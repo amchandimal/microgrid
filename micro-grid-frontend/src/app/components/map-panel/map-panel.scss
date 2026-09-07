@@ -24,6 +24,17 @@
 .search {
   position: relative;
   flex: 1;
+  /*
+   * `flex: 1` alone does not let this shrink. A flex item defaults to
+   * `min-width: auto`, which resolves to its min-content width - and because
+   * this is itself a flex container wrapped around a text input, that minimum
+   * is the width of the input's placeholder. On a phone the search therefore
+   * refused to go below roughly 300px and shoved the two `flex: none` buttons
+   * beside it off the right edge, which is what put "Wollongong" outside the
+   * viewport and gave the page a horizontal scroll. The floor has to be lifted
+   * here and on the input; either one left at `auto` re-inflates the other.
+   */
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -48,6 +59,9 @@
 
   &__input {
     flex: 1;
+    /* The other half of the pair above: an input carries its own intrinsic
+       minimum, so without this the placeholder still sets the floor. */
+    min-width: 0;
     border: 0;
     outline: 0;
     background: transparent;

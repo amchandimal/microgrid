@@ -84,6 +84,13 @@ docker-compose.override.yml
 *.swp
 *~
 
+# --- Claude Code ---
+# launch.json is shared (it defines the two dev servers); everything else under
+# .claude is per-machine state - local permission grants, transcripts, scratch -
+# and some of it carries absolute paths from whoever's machine wrote it.
+.claude/*
+!.claude/launch.json
+
 # --- OS ---
 .DS_Store
 Thumbs.db
